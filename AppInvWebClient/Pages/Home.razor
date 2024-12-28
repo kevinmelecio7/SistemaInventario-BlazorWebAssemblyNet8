@@ -1,0 +1,13 @@
+﻿@page "/home"
+<AuthorizeView>
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <PageTitle>Home</PageTitle>
+
+        <h1>Sistema de Inventario Fisico</h1>
+        <h3>Bienvenido @context.User.Identity!.Name</h3>
+
+    </Authorized>
+</AuthorizeView>

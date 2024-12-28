@@ -1,0 +1,130 @@
+﻿@page "/"
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.0/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+    <script src="scripts.js"></script>
+    <style>
+        body {
+            min-height: 1vh;
+            background: linear-gradient(#a2b8f4, #5271d3);
+            font-family: 'Arial', sans-serif;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+
+        .custom-placeholder::placeholder {
+            color: white;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<div class="flex items-center justify-center min-h-screen">
+    <div class="bg-white bg-opacity-10 backdrop-blur-md p-8 rounded-lg shadow-lg w-96">
+        <h2 class="text-3xl font-bold text-white mb-6 text-center">Iniciar Sesión</h2>
+        <EditForm Model="@Login" OnValidSubmit="LoginClicked">
+            <DataAnnotationsValidator />
+            <div class="mb-4">
+                <label class="block text-white text-sm font-bold mb-2">Correo</label>
+                <div class="relative">
+                    <InputText @bind-Value="Login.Email"
+                               class="w-full p-3 text-white bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-white custom-placeholder"
+                               placeholder="Correo" />
+                    <i class="fas fa-envelope absolute right-3 top-2 text-white"></i>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-white text-sm font-bold mb-2">Contraseña</label>
+                <div class="relative">
+                    <InputText @bind-Value="Login.Password"
+                               class="w-full p-3 text-white bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-white custom-placeholder"
+                               placeholder="Contraseña" type="password" />
+                    <i class="fas fa-lock absolute right-3 top-2 text-white"></i>
+                </div>
+            </div>
+            <div class="mb-6">
+                <button class="w-full bg-white text-gray-800 font-bold py-3 px-4 rounded-full hover:bg-gray-200 focus:outline-none focus:shadow-outline" type="submit">
+                    Acceder
+                </button>
+            </div>
+            <ValidationSummary />
+        </EditForm>
+    </div>
+</div>
+
+@* *******   LOADING   ******* *@
+@if (Loading.showLoading)
+{
+    <div class="modal fade show bg-black bg-opacity-50" style="display: block">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="d-flex align-items-center start">
+                        <div class="spinner-border" aria-hidden="true"></div>
+                        <strong role="status" class="ps-3">@Loading.messageLoading</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    public LoginDTO Login = new();
+    protected override async Task OnInitializedAsync()
+    {
+        LoginResponse response = await accountService.LogoutAsync();
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        customAuthStateProvider.UpdateNotAuthenticationState();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var mensajeLogout = await sessionStorage.GetItemAsync<string>("logout");
+            if (!string.IsNullOrEmpty(mensajeLogout))
+            {
+                await js.InvokeVoidAsync("alert", mensajeLogout);
+                await sessionStorage.SetItemAsync("logout", "");
+            }
+        }
+    }
+
+
+
+    async Task LoginClicked()
+    {
+        Loading.Show();
+        try
+        {
+            LoginResponse response = await accountService.LoginAsync(Login);
+            if (!response.Flag)
+            {
+                Loading.Hide();
+                await js.InvokeVoidAsync("alert", response.Message);
+                return;
+            }
+
+            var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+            customAuthStateProvider.UpdateAuthenticationState(response.JWTToken);
+            await sessionStorage.SetItemAsync("cuenta", Login.Email);
+            Loading.Hide();
+            NavManager.NavigateTo("/home", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Loading.Hide();
+            await js.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+   
+}

@@ -1,0 +1,527 @@
+﻿@page "/users"
+@using System.Text.RegularExpressions;
+
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+</style>
+
+
+<AuthorizeView Roles="Admin">
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <h3>Usuarios y Roles</h3>
+        <br />
+        <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar Nuevo Usuario" Click="()=>{showAddUser = true;}" Disabled="@(editMode == DataGridEditMode.Single && usersToInsert.Count() > 0)" />
+
+        <br /><br />
+
+        @if (users != null)
+        {
+            <RadzenDataGrid @ref="usersGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true" ColumnWidth="150rem" EditMode="@editMode"
+                            Data="users" TItem="UserDTO" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" Sort="@Reset" Filter="@Reset">
+
+                @* <HeaderTemplate>
+
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar Nuevo Usuario" Click="@InsertRow" Disabled="@(editMode == DataGridEditMode.Single && usersToInsert.Count() > 0)" />
+            </HeaderTemplate>*@
+                <Columns>
+                    <RadzenDataGridColumn Property="nombre" Title="Nombre" Width="200rem">
+                        <EditTemplate Context="user">
+                            <RadzenTextBox @bind-Value="user.nombre" Style="width: 100%" aria-label="Default TextBox" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Property="correo" Title="Correo" Width="100rem">
+                        <EditTemplate Context="user">
+                            <RadzenTextBox @bind-Value="user.correo" Style="width: 100%" aria-label="Default TextBox" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Property="rol" Title="Rol">
+                        <EditTemplate Context="user">
+                            <RadzenDropDown @bind-Value=@user.rol Data=@roles Style="width: 100%; max-width: 400px;" Name="DropDownBindValue" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Context="user" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="15rem">
+                        <Template Context="user">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                          Click="@(args => EditRow(user))" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton Icon="lock" ButtonStyle="ButtonStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
+                                          Click="@(args => {userUpdate = user; showUpdatePassword = true;})">
+                            </RadzenButton>
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
+                                          Click="@(args => DeleteRow(user))" @onclick:stopPropagation="true">
+                            </RadzenButton>
+
+                        </Template>
+                        <EditTemplate Context="user">
+                            <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" aria-label="Save"
+                                          Click="@((args) => SaveRow(user))">
+                            </RadzenButton>
+                            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" aria-label="Cancel"
+                                          Click="@((args) => CancelEdit(user))">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" aria-label="Delete"
+                                          Click="@(args => DeleteRow(user))">
+                            </RadzenButton>
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+
+        @if (showAddUser)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content rounded p-3">
+                        <RadzenColumn Size="12" SizeMD="6">
+                            <RadzenStack>
+                                <RadzenFieldset Text="Crear nuevo Registro">
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Nombre" Component="email" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenTextBox @bind-Value="Register.Name" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Correo" Component="Email" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenTextBox @bind-Value="Register.Email" Style="width: 100%;" Name="Email" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Contraseña" Component="material" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenPassword @bind-Value="Register.Password" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Confirmar Contraseña" Component="linea" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenPassword @bind-Value="Register.ConfirmPassword" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                </RadzenFieldset>
+                            </RadzenStack>
+                        </RadzenColumn>
+                        @if (validacion != "")
+                        {
+                            <RadzenText TextStyle="TextStyle.Body1" class="rz-pt-2 rz-color-danger"> @validacion </RadzenText>
+                        }
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" Class="rz-mt-8 rz-mb-4">
+                            <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="AGREGAR USUARIO" Click="RegisterClicked" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="CANCELAR" Click="()=>{showAddUser = false; Register = new(); validacion = string.Empty;}" />
+                        </RadzenStack>
+
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showUpdatePassword)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content rounded p-3">
+                        <RadzenColumn Size="12" SizeMD="6">
+                            <RadzenStack>
+                                <RadzenFieldset Text="Nueva Contraseña">
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Usuario" Component="email" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenLabel Text="@userUpdate.nombre" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                    @* <div class="p-2">
+                                <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenLabel Text="Correo" Component="Email" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                <RadzenTextBox @bind-Value="Register.Email" Style="width: 100%;" Name="Email" />
+                                </RadzenColumn>
+                                </RadzenRow>
+                                </div> *@
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Contraseña" Component="material" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenPassword @bind-Value="Register.Password" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                    <div class="p-2">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Confirmar Contraseña" Component="linea" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenPassword @bind-Value="Register.ConfirmPassword" Style="width: 100%;" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                </RadzenFieldset>
+                            </RadzenStack>
+                        </RadzenColumn>
+                        @if (validacion != "")
+                        {
+                            <RadzenText TextStyle="TextStyle.Body1" class="rz-pt-2 rz-color-danger"> @validacion </RadzenText>
+                        }
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" Class="rz-mt-8 rz-mb-4">
+                            <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="MODIFICAR CONTRASEÑA" Click="UpdatePassword" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="CANCELAR" Click="()=>{showUpdatePassword = false; userUpdate = new(); Register = new(); validacion = string.Empty;}" />
+                        </RadzenStack>
+
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   LOADING   ******* *@
+        @if (Loading.showLoading)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display: block">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <div class="d-flex align-items-center start">
+                                <div class="spinner-border" aria-hidden="true"></div>
+                                <strong role="status" class="ps-3">@Loading.messageLoading</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   MODAL   ******* *@
+        @if (Modal.showModal)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5">@Modal.TitleModal</h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+                                @if (Modal.ModalIcon.Length != 0)
+                                {
+                                    <img src="@Modal.ModalIcon" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+                                }
+                                <div class="p-2 fs-5">@Modal.MessageModal</div>
+                            </div>
+                            @if (Modal.MessageSecondary.Length != 0)
+                            {
+                                <div class="d-flex flex-row mb-3 align-items-center">
+                                    <div class="p-2 fs-5">@Modal.MessageSecondary</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-@(Modal.MessageType.Length != 0 ? Modal.MessageType.ToLower() :"light" )" @onclick="() => Modal.Hide()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    bool newUser = false;
+
+    List<string> roles = new List<string> { "User", "Admin" };
+
+    [Inject]
+    private UserService userService { get; set; }
+
+    private List<UserDTO> users;
+
+    private UserDTO userUpdate = new UserDTO();
+
+    public RegisterDTO Register = new RegisterDTO();
+
+    RadzenDataGrid<UserDTO> usersGrid;
+
+    DataGridEditMode editMode = DataGridEditMode.Single;
+
+    List<UserDTO> usersToInsert = new List<UserDTO>();
+    List<UserDTO> usersToUpdate = new List<UserDTO>();
+
+    bool showUpdatePassword = false;
+    bool showAddUser = false;
+    string validacion = "";
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await userService.GetUserAsync();
+    }
+
+
+    void Reset()
+    {
+        usersToInsert.Clear();
+        usersToUpdate.Clear();
+    }
+
+    void Reset(UserDTO user)
+    {
+        usersToInsert.Remove(user);
+        usersToUpdate.Remove(user);
+    }
+
+
+    void OnUpdateRow(UserDTO user)
+    {
+        Reset(user);
+    }
+
+    async Task InsertRow()
+    {
+        if (editMode == DataGridEditMode.Single)
+        {
+            Reset();
+        }
+        var user = new UserDTO();
+        usersToInsert.Add(user);
+        await usersGrid.InsertRow(user);
+        newUser = true;
+    }
+
+    void OnCreateRow(UserDTO user)
+    {
+        usersToInsert.Remove(user);
+    }
+
+
+    async Task EditRow(UserDTO user)
+    {
+        Reset();
+        usersToUpdate.Add(user);
+        await usersGrid.EditRow(user);
+    }
+
+    async Task DeleteRow(UserDTO user)
+    {
+        Loading.Show();
+        Reset(user);
+        string result = await userService.DeleteUserAsync(user);
+        if (result == "Error")
+        {
+            await OnInitializedAsync();
+            Modal.Show("ERROR AL ELIMINAR USUARIO", "ERROR", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+        Modal.Show($"SE HA ELIMINADO EL USUARIO {user.nombre}", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        await CancelEdit(user);
+        Loading.Hide();
+    }
+
+    async Task SaveRow(UserDTO user)
+    {
+        Loading.Show();
+        if (newUser)
+        {
+            //insertar un nuevo usuario
+            Console.WriteLine("AGREGAR USUARIO--->");
+            Console.WriteLine($"Num: {user.correo} \n Nombre: {user.nombre} \n Rol: {user.rol}");
+            Modal.Show($"SE HA REGISTRADO EL NUEVO USUARIO CON ROL {user.rol}", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        }
+        else
+        {
+            string result = await userService.UpdateUserAsync(user);
+            if (result == "Error")
+            {
+                await OnInitializedAsync();
+                Modal.Show("ERROR AL MODIFICAR USUARIO", "ERROR", Message.ERROR, Icon.ERROR);
+                Loading.Hide();
+                return;
+            }
+            Modal.Show($"SE HA MODIFICADO LA INFORMACION PARA EL USUARIO {user.nombre}", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        }
+        await CancelEdit(user);
+        Loading.Hide();
+    }
+
+    async Task CancelEdit(UserDTO user)
+    {
+        Loading.Show();
+        Reset(user);
+        usersGrid.CancelEditRow(user);
+        users = await userService.GetUserAsync();
+        newUser = false;
+        Loading.Hide();
+    }
+
+    async Task RegisterClicked()
+    {
+        Loading.Show();
+        if (Register.Name == "" || Register.Email == "" || Register.Password == "" || Register.ConfirmPassword == "" ||
+            Register.Name is null || Register.Email is null || Register.Password is null || Register.ConfirmPassword is null)
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "Existen campos vacios. Ingresa los datos correspondientes";
+            return;
+        }
+
+        if (!EsCorreoValido(Register.Email))
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "Ingresa un Correo valido";
+            return;
+        }
+        await OnInitializedAsync();
+        if (EsCorreoDuplicado(Register.Email))
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "El correo que ingresaste ya existe. Registra uno diferente.";
+            return;
+        }
+
+        if (!EsPasswordValido(Register.Password))
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "Ingresa una contraseña valida mayor a 8 caracteres (Que contenga por lo menos 1 numero y 1 letra)";
+            return;
+        }
+
+        if (Register.Password != Register.ConfirmPassword)
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "La contraseña no coincide";
+            return;
+        }
+
+
+        Register.Role = "User";
+        validacion = string.Empty;
+
+
+        RegistrationResponse response = await accountService.RegisterAsync(Register);
+        if (!response.Flag)
+        {
+            await js.InvokeVoidAsync("alert", response.Message);
+            return;
+        }
+        Modal.Show($"NUEVO USUARIO {Register.Name} REGISTRADO CON ROL 'USER'", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        Loading.Hide();
+        showAddUser = false;
+        Register = new();
+        validacion = string.Empty;
+        await OnInitializedAsync();
+        return;
+    }
+
+    async Task UpdatePassword()
+    {
+        Loading.Show();
+        if (Register.Password == "" || Register.ConfirmPassword == "" || Register.Password is null || Register.ConfirmPassword is null)
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "Existen campos vacios. Ingresa los datos correspondientes";
+            return;
+        }
+
+        if (!EsPasswordValido(Register.Password))
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "Ingresa una contraseña valida mayor a 8 caracteres (Que contenga por lo menos 1 numero y 1 letra)";
+            return;
+        }
+
+        if (Register.Password != Register.ConfirmPassword)
+        {
+            await Task.Delay(500);
+            Loading.Hide();
+            validacion = "La contraseña no coincide";
+            return;
+        }
+
+        Console.WriteLine($"Modificar usuario {userUpdate.id} con el correo {userUpdate.correo}");
+        Console.WriteLine($"Nueva contraseña {Register.Password}");
+        Console.WriteLine($"-------------------------------------------------------------------");
+        // enviare como user.correo la contraseña nueva
+        userUpdate.correo = Register.Password;
+        string result = await userService.UpdatePasswordUserAsync(userUpdate);
+        if (result == "Error")
+        {
+            await OnInitializedAsync();
+            Modal.Show("ERROR AL CAMBIAR CONTRASEÑA", "ERROR", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+
+        Modal.Show($"SE HA CAMBIADO LA CONTRASEÑA PARA EL USUARIO {Register.Name}", "NUEVA CONTRASEÑA", Message.SUCCESS, Icon.SUCCESS);
+        Loading.Hide();
+        showUpdatePassword = false;
+        userUpdate = new();
+        Register = new();
+        validacion = string.Empty;
+        await OnInitializedAsync();
+        return;
+
+    }
+
+
+
+    public bool EsCorreoValido(string email)
+    {
+        string pattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return Regex.IsMatch(email, pattern);
+    }
+
+    public bool EsPasswordValido(string password)
+    {
+        // La expresión regular verifica:
+        // - Al menos una letra (mayúscula o minúscula)
+        // - Al menos un dígito
+        // - Mínimo 8 caracteres
+        string pattern = @"^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{8,}$";
+        return Regex.IsMatch(password, pattern);
+    }
+
+    public bool EsCorreoDuplicado(string email)
+    {
+        bool validarDuplicado = users.Any(item => item.correo!.Equals(email, StringComparison.OrdinalIgnoreCase));
+        return validarDuplicado;
+    }
+
+}

@@ -1,0 +1,891 @@
+﻿@page "/reporte"
+@using System.Data
+@using NPOI.SS.UserModel;
+@using NPOI.XSSF.UserModel;
+@using System.IO;
+@using System.Globalization;
+@using System.Text
+
+<AuthorizeView Roles="Admin">
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <h3>Reporte</h3>
+        <br />
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0.5rem">
+            <RadzenLabel Text="Seleccione un periodo" Component="DropDownVirtualization" />
+            <RadzenDropDown AllowClear="true" @bind-Value=periodo AllowVirtualization="true" Name="DropDownVirtualization" Change=@(()=>{vacio=false;})
+                            AllowFiltering="true" Data=@listPeriodo TextProperty="periodo" ValueProperty="periodo" Style="width: 100%; max-width: 400px;" />
+            <RadzenButton Click=@(()=>buscarReporte()) Icon="search" ButtonStyle="ButtonStyle.Primary" />
+            @if (tableReporte)
+            {
+                <RadzenButton Text="EXPORTAR REPORTE" Icon="get_app" ButtonStyle="ButtonStyle.Secondary" Click=@(()=>exportarExcel()) />
+                <RadzenButton Text="EXPORTAR TOTALIZADO" Icon="get_app" ButtonStyle="ButtonStyle.Info" Click=@(()=>exportarTotalizadoExcel()) />
+                <RadzenButton Text="EXPORTAR SAP" Icon="get_app" ButtonStyle="ButtonStyle.Primary" Click=@(()=>exportarSAP()) />
+            }
+        </RadzenStack>
+        <br />
+        @if (tableReporte)
+        {
+
+            @if (showDetalles == true)
+            {
+                <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content rounded p-3">
+                            <RadzenRow class="rz-text-align-center" Gap="0.5rem">
+                                <RadzenColumn SizeSM="3" class="rz-p-2 rz-p-md-5">
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-1 rz-my-0">FOLIO</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1" class="rz-display-flex"><b>@selectedRegistro[0].folio</b></RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn SizeSM="3" class="rz-p-2 rz-p-md-5">
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-1 rz-mb-0">STORAGE BIN</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1" class="rz-display-flex"><b>@selectedRegistro[0].storage_bin</b></RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-1 rz-mb-0">STORAGE TYPE</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1" class="rz-display-flex"><b>@selectedRegistro[0].storage_type</b></RadzenText>
+                                </RadzenColumn>
+                                <RadzenColumn SizeSM="6" class="rz-p-2 rz-p-md-5">
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-1 rz-my-0">MATERIAL</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1" class="rz-display-flex"><b>@selectedRegistro[0].material_number</b></RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-1 rz-mb-0">DESCRIPCION</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1" class="rz-display-flex"><b>@selectedRegistro[0].material_descripcion</b></RadzenText>
+                                </RadzenColumn>
+                            </RadzenRow>
+                            <RadzenCard class="rz-background-color-primary-light rz-shadow-0 rz-border-radius-0 rz-p-8" style="margin: 1rem calc(-1 * var(--rz-card-padding));">
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-color-on-primary-light"><strong>Informacion Detallada</strong></RadzenText>
+                                <RadzenRow RowGap="0">
+                                    <RadzenColumn SizeSM="6">
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Cantidad Inicial</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].cantidad_inicial pz</b></RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Cantidad Contada</RadzenText>
+                                        @if (selectedRegistro[0].cantidad_segundo == -1)
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].cantidad_contada pz</b></RadzenText>
+                                        }
+                                        else
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].cantidad_segundo pz</b></RadzenText>
+                                        }
+
+
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Diferencia Cantidad</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].diferencia_cantidad pz</b></RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Porcentaje Cantidad</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].porcentaje_diferencia.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")) %</b></RadzenText>
+                                    </RadzenColumn>
+                                    <RadzenColumn SizeSM="6">
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Importe Inicial</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>$ @selectedRegistro[0].importe_inicial.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")) </b></RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Importe Contada</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>$ @selectedRegistro[0].importe_contada.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US"))</b></RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Diferencia Importe</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>$ @selectedRegistro[0].diferencia_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")) </b></RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Porcentaje Variacion Importe</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].porcentaje_variacion_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")) %</b></RadzenText>
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenCard>
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">
+                                <RadzenButton Variant="Variant.Text" Text="CERRAR" Click="@(()=>{showDetalles = false;})" />
+                            </RadzenStack>
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+
+
+            <div style="width:auto; overflow-x: auto;">
+                <RadzenDataGrid @ref="grid" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.And"
+                                AllowSorting="true" PageSize="15" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
+                                Data="@listReporte" Density="Density.Compact" class="responsive-table"
+                                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@selectedRegistro>
+
+                    <HeaderTemplate>
+                        <RadzenRow class="rz-text-align-center" Gap="1rem">
+                            <RadzenColumn Size="6" class=" rz-p-1" >
+                                @if (selectedRegistro?.Any() == true)
+                                {
+                                    <RadzenButton Variant="Variant.Flat" Text="DETALLES" ButtonStyle="ButtonStyle.Info" Click="@(()=>{showDetalles = true;})" />
+                                }
+                            </RadzenColumn>
+                            @* <RadzenColumn Size="6" class=" rz-p-1">
+                                <span>Total Cantidad Contado: @((grid!.View.Cast<ReporteDTO>()?.Sum(item => item.cantidad_contada) ?? 0))</span>
+                            </RadzenColumn> *@
+                        </RadzenRow>
+
+                        <div class="p-0">
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </div>
+                        
+                    </HeaderTemplate>
+                    <Columns>
+                        <RadzenDataGridColumn Property="folio" Title="Folio" />
+                        <RadzenDataGridColumn Property="estado" Title="Estado">
+                            <Template Context="data">
+                                @if (data.estado == "CANCELADO")
+                                {
+                                    <div class="rz-background-color-danger-light">
+                                        <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                    </div>
+                                }
+                                else if (data.estado == "AUDITADO")
+                                {
+                                    <div class="rz-background-color-warning-light">
+                                        <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                    </div>
+                                }
+                                else if (data.estado == "PENDIENTE")
+                                {
+                                    <div class="rz-background-color-secondary-lighter">
+                                        <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                    </div>
+                                }
+                                else if (data.estado == "ADICIONAL 2DO" || data.estado == "PRECARGADO 2DO")
+                                {
+                                    <div class="rz-background-color-info-lighter">
+                                        <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>
+                                        <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                    </div>
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="storage_bin" Title="Storage Bin" />
+                        <RadzenDataGridColumn Property="material_number" Title="Material" />
+                        <RadzenDataGridColumn Property="material_descripcion" Title="Descripcion" />
+                        <RadzenDataGridColumn Property="cantidad_inicial" Title="Cantidad Inicial" />
+                        <RadzenDataGridColumn Property="cantidad_contada" Title="Cantidad Contado">
+                            <Template Context="data">
+                                @if (data.estado == "PENDIENTE")
+                                {
+                                    <div>
+                                        <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                    </div>
+                                    return;
+                                }
+                                else if (data.estado == "AUDITADO")
+                                {
+                                    <div>
+                                        <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                    </div>
+                                    return;
+                                }
+                                @if (data.cantidad_segundo == -1)
+                                {
+                                    if (data.cantidad_contada == data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-success-light">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                        </div>
+                                    }
+                                    else if (data.cantidad_contada < data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-danger-light">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                        </div>
+                                    }
+                                    else if (data.cantidad_contada > data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-warning">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    if (data.cantidad_segundo == data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-success-light">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_segundo</span>
+                                        </div>
+                                    }
+                                    else if (data.cantidad_segundo < data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-danger-light">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_segundo</span>
+                                        </div>
+                                    }
+                                    else if (data.cantidad_segundo > data.cantidad_inicial)
+                                    {
+                                        <div class="rz-background-color-warning">
+                                            <span style='color: var(--rz-color-white)'>@data.cantidad_segundo</span>
+                                        </div>
+                                    }
+                                }
+
+
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="diferencia_cantidad" Title="Diferencia" />
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
+        }
+        @if (vacio)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-12">
+                <RadzenText TextStyle="TextStyle.H3" TagName="TagName.P">No exiten registros para el periodo @periodo</RadzenText>
+            </RadzenStack>
+        }
+
+
+
+
+        @* *******   LOADING   ******* *@
+        @if (Loading.showLoading)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display: block">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <div class="d-flex align-items-center start">
+                                <div class="spinner-border" aria-hidden="true"></div>
+                                <strong role="status" class="ps-3">@Loading.messageLoading</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   MODAL   ******* *@
+        @if (Modal.showModal)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5">@Modal.TitleModal</h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+                                @if (Modal.ModalIcon.Length != 0)
+                                {
+                                    <img src="@Modal.ModalIcon" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+                                }
+                                <div class="p-2 fs-5">@Modal.MessageModal</div>
+                            </div>
+                            @if (Modal.MessageSecondary.Length != 0)
+                            {
+                                <div class="d-flex flex-row mb-3 align-items-center">
+                                    <div class="p-2 fs-5">@Modal.MessageSecondary</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-@(Modal.MessageType.Length != 0 ? Modal.MessageType.ToLower() :"light" )" @onclick="() => Modal.Hide()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+
+    private RadzenDataGrid<ReporteDTO>? grid;
+
+    IList<ReporteDTO> selectedRegistro;
+
+    string periodo = string.Empty;
+
+    bool tableReporte = false;
+    bool vacio = false;
+    bool showDetalles = false;
+
+
+    private List<PeriodoDTO> listPeriodo = new List<PeriodoDTO>();
+    private List<ReporteDTO> listReporte = new List<ReporteDTO>();
+    private List<ReporteDTO> listPendientes = new List<ReporteDTO>();
+
+    [Inject]
+    private InputsDataService InputsDataService { get; set; }
+
+    [Inject]
+    private BitacoraService bitacoraService { get; set; }
+
+    [Inject]
+    private IJSRuntime JS { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loading.Show();
+        listPeriodo = await InputsDataService.GetPeriodoAsync();
+        if (listPeriodo.Count() == 0)
+        {
+            Modal.Show("NO HAY UN PERIDIO POR EL MOMENTO", "ERROR", Message.WARNING, Icon.WARNING);
+            Loading.Hide();
+            return;
+        }
+
+        periodo = listPeriodo[0].periodo!;
+
+        Loading.Hide();
+    }
+
+    private async Task buscarReporte()
+    {
+        if (periodo is null)
+        {
+            vacio = false;
+            tableReporte = false;
+            return;
+        }
+
+        Loading.Show();
+        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        foreach (var item in listReporte)
+        {
+            if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
+            {
+                if (item.estado == "PRECARGADO")
+                    item.estado = "PRECARGADO 2DO";
+                else
+                    item.estado = "ADICIONAL 2DO";
+            }
+        }
+
+
+        listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+        foreach (var p in listPendientes)
+        {
+            listReporte.Add(p);
+        }
+        if (listReporte.Count() == 0)
+        {
+            vacio = true;
+            tableReporte = false;
+        }
+        else
+        {
+            vacio = false;
+            tableReporte = true;
+        }
+
+        Loading.Hide();
+    }
+
+    private async Task exportarExcel()
+    {
+        Loading.Show();
+        try
+        {
+            listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+            foreach (var item in listReporte)
+            {
+                if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
+                {
+                    if (item.estado == "PRECARGADO")
+                        item.estado = "PRECARGADO 2DO";
+                    else
+                        item.estado = "ADICIONAL 2DO";
+                }
+            }
+            listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+            foreach (var p in listPendientes)
+            {
+                listReporte.Add(p);
+            }
+            IWorkbook workbook = new XSSFWorkbook();
+            ISheet sheet = workbook.CreateSheet($"Reporte {periodo}");
+
+            // Crear la fila de encabezado
+            IRow headerRow = sheet.CreateRow(0);
+            headerRow.CreateCell(0).SetCellValue("ID");
+            headerRow.CreateCell(1).SetCellValue("Folio");
+            headerRow.CreateCell(2).SetCellValue("Periodo");
+            headerRow.CreateCell(3).SetCellValue("Estado");
+            headerRow.CreateCell(4).SetCellValue("Storage Bin");
+            headerRow.CreateCell(5).SetCellValue("Storage Type");
+            headerRow.CreateCell(6).SetCellValue("Material Number");
+            headerRow.CreateCell(7).SetCellValue("Material Descripcion");
+            headerRow.CreateCell(8).SetCellValue("Unit Standard Cost");
+            headerRow.CreateCell(9).SetCellValue("Cantidad Inicial");
+            headerRow.CreateCell(10).SetCellValue("Cantidad Contada");
+            headerRow.CreateCell(11).SetCellValue("Diferencia Cantidad");
+            headerRow.CreateCell(12).SetCellValue("Porcentaje Diferencia");
+            headerRow.CreateCell(13).SetCellValue("Importe Inicial");
+            headerRow.CreateCell(14).SetCellValue("Importe Contada");
+            headerRow.CreateCell(15).SetCellValue("Diferencia Importe");
+            headerRow.CreateCell(16).SetCellValue("Porcentaje Variacion Importe");
+            headerRow.CreateCell(17).SetCellValue("Usuario");
+            headerRow.CreateCell(18).SetCellValue("Fecha");
+
+            for (int i = 0; i < listReporte.Count; i++)
+            {
+                ReporteDTO item = listReporte[i];
+                IRow row = sheet.CreateRow(i + 1);
+                row.CreateCell(0).SetCellValue(item.id);
+                row.CreateCell(1).SetCellValue(item.folio ?? "");
+                row.CreateCell(2).SetCellValue(item.periodo ?? "");
+                row.CreateCell(3).SetCellValue(item.estado ?? "");
+                row.CreateCell(4).SetCellValue(item.storage_bin ?? "");
+                row.CreateCell(5).SetCellValue(item.storage_type ?? "");
+                row.CreateCell(6).SetCellValue(item.material_number ?? "");
+                row.CreateCell(7).SetCellValue(item.material_descripcion ?? "");
+                row.CreateCell(8).SetCellValue(item.unit_standard_cost);
+                row.CreateCell(9).SetCellValue(item.cantidad_inicial);
+
+                @if (item.cantidad_segundo == -1)
+                    row.CreateCell(10).SetCellValue(item.cantidad_contada);
+                else
+                    row.CreateCell(10).SetCellValue(item.cantidad_segundo);
+
+                row.CreateCell(11).SetCellValue(item.diferencia_cantidad);
+                row.CreateCell(12).SetCellValue(item.porcentaje_diferencia.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+                row.CreateCell(13).SetCellValue(item.importe_inicial.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+                row.CreateCell(14).SetCellValue(item.importe_contada.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+                row.CreateCell(15).SetCellValue(item.diferencia_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+                row.CreateCell(16).SetCellValue(item.porcentaje_variacion_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+                row.CreateCell(17).SetCellValue(item.usuario ?? "");
+                row.CreateCell(18).SetCellValue(item.fecha.ToString("yyyy-MM-dd"));
+            }
+
+            for (int col = 0; col <= 18; col++)
+            {
+                int maxLength = 0;
+                for (int row = 0; row <= listReporte.Count; row++)
+                {
+                    ICell cell = sheet.GetRow(row)?.GetCell(col);
+                    if (cell != null)
+                    {
+                        int length = cell.ToString().Length;
+                        if (length > maxLength)
+                        {
+                            maxLength = length;
+                        }
+                    }
+                }
+                sheet.SetColumnWidth(col, (maxLength + 2) * 256); // Ajuste el valor 256 para el tamaño
+            }
+
+            await buscarReporte();
+
+            // Guardar el archivo en memoria y devolverlo como un archivo descargable
+            using (var stream = new MemoryStream())
+            {
+                workbook.Write(stream);
+                byte[] bytes = stream.ToArray();
+
+                // Utilizar la clase NavigationManager para descargar el archivo
+                var base64 = Convert.ToBase64String(bytes);
+                var content = $"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64}";
+                await JS.InvokeVoidAsync("downloadFile", content, $"Reporte {periodo}.xlsx");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            BitacoraDTO bitacora = new BitacoraDTO { vista = "ReportePage", accion = "exportarExcel", tipo = "ERROR", descripcion = ex.Message, usuario = "0" };
+            await bitacoraService.InsertBitacoraAsync(bitacora);
+        }
+
+        Loading.Hide();
+    }
+
+    private async Task exportarTotalizadoExcel()
+    {
+        Loading.Show();
+        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList(); ;
+        List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
+
+        //**************************************/
+        listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+        foreach (var p in listPendientes)
+        {
+            listReporte.Add(p);
+        }
+        //**************************************/
+
+
+        List<ReporteDTO> listReporteDuplicado = listReporte;
+
+        while (listReporteDuplicado.Count() != 0)
+        {
+            ReporteDTO objReporte = listReporteDuplicado[0];
+            var list = listReporteDuplicado.Where(x => x.storage_bin == objReporte.storage_bin).
+                                            Where(y => y.material_number == objReporte.material_number).ToList();
+
+            double cantidadInicial = 0;
+            double cantidadContada = 0;
+            double importeInicial = 0;
+            double importeContada = 0;
+            List<int> idXBorrar = new List<int>();
+            List<string> folioXBorrar = new List<string>();
+
+            foreach (var obj in list)
+            {
+                cantidadInicial = cantidadInicial + obj.cantidad_inicial;
+                @if (obj.cantidad_segundo == -1)
+                    cantidadContada = cantidadContada + obj.cantidad_contada;
+                else
+                    cantidadContada = cantidadContada + obj.cantidad_segundo;
+                importeInicial = importeInicial + obj.importe_inicial;
+                importeContada = importeContada + obj.cantidad_inicial;
+                if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
+                {
+                    folioXBorrar.Add(obj.folio!);
+                } else
+                {
+                    idXBorrar.Add(obj.id);
+                }
+
+            }
+
+            ReporteDTO addObj = new ReporteDTO
+                {
+                    periodo = list[0].periodo,
+                    storage_bin = list[0].storage_bin,
+                    storage_type = list[0].storage_type,
+                    material_number = list[0].material_number,
+                    material_descripcion = list[0].material_descripcion,
+                    unit_standard_cost = list[0].unit_standard_cost,
+                    cantidad_inicial = cantidadInicial,
+                    cantidad_contada = cantidadContada,
+                    diferencia_cantidad = cantidadContada - cantidadInicial,
+                    porcentaje_diferencia = (((cantidadContada - cantidadInicial) * 100) / cantidadInicial),
+                    importe_inicial = importeInicial,
+
+                    importe_contada = ((cantidadContada * importeInicial) / cantidadInicial),
+                    diferencia_importe = ((cantidadContada * importeInicial) / cantidadInicial) - importeInicial,
+                    porcentaje_variacion_importe = ((((cantidadContada * importeInicial) / cantidadInicial) - importeInicial) * 100) / cantidadInicial,
+                };
+
+            listReporteTotalizado.Add(addObj);
+            if (listReporteTotalizado.Count() == 2735)
+            {
+                Console.WriteLine("Aveer");
+            }
+
+            if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
+            {
+                foreach (var iden in folioXBorrar)
+                {
+                    listReporteDuplicado.RemoveAll(item => item.folio == iden);
+                    // Console.WriteLine($"[{iden}]");
+                }
+            } else
+            {
+                // Console.WriteLine($"--> Para {objReporte.storage_bin} - {objReporte.material_number} ");
+                foreach (var iden in idXBorrar)
+                {
+                    listReporteDuplicado.RemoveAll(item => item.id == iden);
+                    // Console.WriteLine($"[{iden}]");
+                }
+            }
+
+        }
+
+
+        IWorkbook workbook = new XSSFWorkbook();
+        ISheet sheet = workbook.CreateSheet($"Reporte {periodo}");
+
+        // Crear la fila de encabezado
+        IRow headerRow = sheet.CreateRow(0);
+        headerRow.CreateCell(0).SetCellValue("Periodo");
+        headerRow.CreateCell(1).SetCellValue("Storage Bin");
+        headerRow.CreateCell(2).SetCellValue("Storage Type");
+        headerRow.CreateCell(3).SetCellValue("Material Number");
+        headerRow.CreateCell(4).SetCellValue("Material Descripcion");
+        headerRow.CreateCell(5).SetCellValue("Unit Standard Cost");
+        headerRow.CreateCell(6).SetCellValue("Cantidad Inicial");
+        headerRow.CreateCell(7).SetCellValue("Cantidad Contada");
+        headerRow.CreateCell(8).SetCellValue("Diferencia Cantidad");
+        headerRow.CreateCell(9).SetCellValue("Porcentaje Diferencia");
+        headerRow.CreateCell(10).SetCellValue("Importe Inicial");
+        headerRow.CreateCell(11).SetCellValue("Importe Contada");
+        headerRow.CreateCell(12).SetCellValue("Diferencia Importe");
+        headerRow.CreateCell(13).SetCellValue("Porcentaje Variacion Importe");
+
+        for (int i = 0; i < listReporteTotalizado.Count; i++)
+        {
+            ReporteDTO item = listReporteTotalizado[i];
+            IRow row = sheet.CreateRow(i + 1);
+            row.CreateCell(0).SetCellValue(item.periodo ?? "");
+            row.CreateCell(1).SetCellValue(item.storage_bin ?? "");
+            row.CreateCell(2).SetCellValue(item.storage_type ?? "");
+            row.CreateCell(3).SetCellValue(item.material_number ?? "");
+            row.CreateCell(4).SetCellValue(item.material_descripcion ?? "");
+            row.CreateCell(5).SetCellValue(item.unit_standard_cost);
+            row.CreateCell(6).SetCellValue(item.cantidad_inicial);
+            row.CreateCell(7).SetCellValue(item.cantidad_contada);
+            row.CreateCell(8).SetCellValue(item.diferencia_cantidad);
+            row.CreateCell(9).SetCellValue(item.porcentaje_diferencia.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+            row.CreateCell(10).SetCellValue(item.importe_inicial.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+            row.CreateCell(11).SetCellValue(item.importe_contada.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+            row.CreateCell(12).SetCellValue(item.diferencia_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+            row.CreateCell(13).SetCellValue(item.porcentaje_variacion_importe.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")));
+        }
+
+        for (int col = 0; col <= 18; col++)
+        {
+            int maxLength = 0;
+            for (int row = 0; row <= listReporte.Count; row++)
+            {
+                ICell cell = sheet.GetRow(row)?.GetCell(col);
+                if (cell != null)
+                {
+                    int length = cell.ToString().Length;
+                    if (length > maxLength)
+                    {
+                        maxLength = length;
+                    }
+                }
+            }
+            sheet.SetColumnWidth(col, (maxLength + 2) * 256); // Ajuste el valor 256 para el tamaño
+        }
+        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        await buscarReporte();
+
+        // Guardar el archivo en memoria y devolverlo como un archivo descargable
+        using (var stream = new MemoryStream())
+        {
+            workbook.Write(stream);
+            byte[] bytes = stream.ToArray();
+
+            // Utilizar la clase NavigationManager para descargar el archivo
+            var base64 = Convert.ToBase64String(bytes);
+            var content = $"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64}";
+            await JS.InvokeVoidAsync("downloadFile", content, $"Reporte {periodo} Totalizado.xlsx");
+        }
+
+        Loading.Hide();
+    }
+
+    private async Task exportarSAP()
+    {
+        Loading.Show();
+        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList();
+        List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
+
+        List<ReporteDTO> listReporteDuplicado = listReporte;
+
+
+
+        while (listReporteDuplicado.Count() != 0)
+        {
+            ReporteDTO objReporte = listReporteDuplicado[0];
+
+            var list = listReporteDuplicado.Where(x => x.storage_bin == objReporte.storage_bin)
+                                           .Where(y => y.material_number == objReporte.material_number).ToList();
+
+            double cantidadInicial = 0;
+            double cantidadContada = 0;
+            double importeInicial = 0;
+            double importeContada = 0;
+            List<int> idXBorrar = new List<int>();
+
+            foreach (var obj in list)
+            {
+                cantidadInicial += obj.cantidad_inicial;
+                cantidadContada += (obj.cantidad_segundo == -1) ? obj.cantidad_contada : obj.cantidad_segundo;
+                importeInicial += obj.importe_inicial;
+                importeContada += obj.cantidad_inicial;
+                idXBorrar.Add(obj.id);
+            }
+
+
+
+
+            ReporteDTO addObj = new ReporteDTO
+                {
+                    storage_bin = list[0].storage_bin,
+                    storage_type = list[0].storage_type,
+                    material_number = list[0].material_number,
+                    cantidad_contada = cantidadContada,
+                };
+
+            if (cantidadContada != 0)
+                listReporteTotalizado.Add(addObj);
+            else
+                Console.WriteLine("Tiene 0ros " + addObj.cantidad_contada);
+
+            foreach (var iden in idXBorrar)
+            {
+                listReporteDuplicado.RemoveAll(item => item.id == iden);
+            }
+        }
+
+        // // Construir el contenido del archivo de texto
+        // var sb = new StringBuilder();
+
+        // // Encabezados
+        // sb.AppendLine("Plant\tWarehouse\tBIN\tMaterial\tQuantity\tStockCategory\tStorageUnit\tStorageLocation");
+
+        // // Datos
+        // var cultureInfo = new System.Globalization.CultureInfo("en-US");
+        // foreach (var item in listReporteTotalizado)
+        // {
+        //     sb.AppendLine($"4300\t430\t{item.storage_type}{item.storage_bin}\t{item.material_number}\t{item.cantidad_contada.ToString("F3", cultureInfo)}\t1\t\t20");
+        // }
+        // await buscarReporte();
+
+        // // Convertir a base64 para la descarga
+        // var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString()));
+        // var fileContent = $"data:text/plain;base64,{content}";
+        // await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_TotalizadoSAP.txt");
+
+        List<ReporteDTO> listTemp = new List<ReporteDTO>();
+        int count = 0;
+        foreach (var x in listReporteTotalizado)
+        {
+            if(listTemp.Count() == 333)
+            {
+                count++;
+                await exportarSAPaTXT(listTemp, count);
+                listTemp = new List<ReporteDTO>();
+            }
+            listTemp.Add(x);
+        }
+
+        if (listTemp.Count != 0)
+        {
+            count++;
+            await exportarSAPaTXT(listTemp, count);
+        }
+        await buscarReporte();
+        Loading.Hide();
+    }
+
+    private async Task exportarSAPaTXT(List<ReporteDTO> lista, int num)
+    {
+        // Construir el contenido del archivo de texto
+        var sb = new StringBuilder();
+
+        // Encabezados
+        sb.AppendLine("Plant\tWarehouse\tBIN\tMaterial\tQuantity\tStockCategory\tStorageUnit\tStorageLocation");
+
+        // Datos
+        var cultureInfo = new System.Globalization.CultureInfo("en-US");
+        foreach (var item in lista)
+        {
+            sb.AppendLine($"4300\t430\t{item.storage_type}{item.storage_bin}\t{item.material_number}\t{item.cantidad_contada.ToString("F3", cultureInfo)}\t1\t\t20");
+        }
+        
+
+        // Convertir a base64 para la descarga
+        var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString()));
+        var fileContent = $"data:text/plain;base64,{content}";
+        await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_TotalizadoSAP_{num}.txt");
+    }
+
+    // private async Task exportarSAP()
+    // {
+    //     Loading.Show();
+    //     listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+    //     listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList(); ;
+    //     List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
+
+    //     //**************************************/
+    //     listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+    //     foreach (var p in listPendientes)
+    //     {
+    //         listReporte.Add(p);
+    //     }
+    //     //**************************************/
+
+
+    //     List<ReporteDTO> listReporteDuplicado = listReporte;
+
+    //     while (listReporteDuplicado.Count() != 0)
+    //     {
+    //         ReporteDTO objReporte = listReporteDuplicado[0];
+    //         var list = listReporteDuplicado.Where(x => x.storage_bin == objReporte.storage_bin).
+    //                                         Where(y => y.material_number == objReporte.material_number).ToList();
+
+    //         double cantidadInicial = 0;
+    //         double cantidadContada = 0;
+    //         double importeInicial = 0;
+    //         double importeContada = 0;
+    //         List<int> idXBorrar = new List<int>();
+    //         List<string> folioXBorrar = new List<string>();
+
+    //         foreach (var obj in list)
+    //         {
+    //             cantidadInicial = cantidadInicial + obj.cantidad_inicial;
+    //             @if (obj.cantidad_segundo == -1)
+    //                 cantidadContada = cantidadContada + obj.cantidad_contada;
+    //             else
+    //                 cantidadContada = cantidadContada + obj.cantidad_segundo;
+    //             importeInicial = importeInicial + obj.importe_inicial;
+    //             importeContada = importeContada + obj.cantidad_inicial;
+    //             if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
+    //             {
+    //                 folioXBorrar.Add(obj.folio!);
+    //             }
+    //             else
+    //             {
+    //                 idXBorrar.Add(obj.id);
+    //             }
+
+    //         }
+
+    //         ReporteDTO addObj = new ReporteDTO
+    //             {
+    //                 storage_bin = list[0].storage_bin,
+    //                 storage_type = list[0].storage_type,
+    //                 material_number = list[0].material_number,
+    //                 cantidad_contada = cantidadContada,
+    //             };
+
+    //         listReporteTotalizado.Add(addObj);
+
+    //         if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
+    //         {
+    //             foreach (var iden in folioXBorrar)
+    //             {
+    //                 listReporteDuplicado.RemoveAll(item => item.folio == iden);
+    //                 // Console.WriteLine($"[{iden}]");
+    //             }
+    //         }
+    //         else
+    //         {
+    //             // Console.WriteLine($"--> Para {objReporte.storage_bin} - {objReporte.material_number} ");
+    //             foreach (var iden in idXBorrar)
+    //             {
+    //                 listReporteDuplicado.RemoveAll(item => item.id == iden);
+    //                 // Console.WriteLine($"[{iden}]");
+    //             }
+    //         }
+
+    //     }
+    //     // Construir el contenido del archivo de texto
+    //     var sb = new StringBuilder();
+
+    //     // Encabezados
+    //     sb.AppendLine("Plant\tWarehouse\tBIN\tMaterial\tQuantity\tStockCategory\tStorageUnit\tStorageLocation");
+
+    //     // Datos
+    //     foreach (var item in listReporteTotalizado)
+    //     {
+    //         sb.AppendLine($"4300\t430\t{item.storage_type}{item.storage_bin}\t{item.material_number}\t{item.cantidad_contada}.000\t1\t\t20");
+    //     }
+    //     listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+    //     await buscarReporte();
+
+    //     // Convertir a base64 para la descarga
+    //     var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString()));
+    //     var fileContent = $"data:text/plain;base64,{content}";
+    //     await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_Totalizado.txt");
+
+    //     Loading.Hide();
+    // }
+}

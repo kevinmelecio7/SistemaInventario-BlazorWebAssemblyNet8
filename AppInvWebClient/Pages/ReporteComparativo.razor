@@ -1,0 +1,158 @@
+﻿@page "/reporteComparativo"
+@using System.Globalization;
+<AuthorizeView Roles="Admin">
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <h3>Reporte Plan Comparativo Periodo </h3>
+
+        <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
+            <RadzenRow>
+                <RadzenColumn Size="12">
+                    <RadzenChart>
+                        <RadzenColumnSeries Data="@PZinicial" CategoryProperty="periodo" Title="Cantidad Inicial" LineType="LineType.Dashed" ValueProperty="cantidad">
+                            <RadzenSeriesDataLabels Visible="true" />
+                        </RadzenColumnSeries>
+                        <RadzenColumnSeries Data="@PZcontado" CategoryProperty="periodo" Title="Cantidad Contada" ValueProperty="cantidad">
+                            <RadzenSeriesDataLabels Visible="true" />
+                        </RadzenColumnSeries>
+                        <RadzenColumnOptions Radius="10" />
+                        <RadzenValueAxis>
+                            <RadzenGridLines Visible="true" />
+                            <RadzenAxisTitle Text="Cantidad en PZ" />
+                        </RadzenValueAxis> 
+                    </RadzenChart>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow>
+                <RadzenColumn Size="12">
+                    <RadzenChart>
+                        <RadzenChartTooltipOptions Shared="true" />
+                        <RadzenLineSeries Smooth="true" Data="@PZinicial" CategoryProperty="periodo" Title="Importe Inicial" LineType="LineType.Dashed" ValueProperty="importe">
+                            <RadzenMarkers Visible="true" MarkerType="MarkerType.Square" />
+                            <RadzenSeriesDataLabels Visible="false" />
+                        </RadzenLineSeries>
+                        <RadzenLineSeries Smooth="true" Data="@PZcontado" CategoryProperty="periodo" Title="Importe Contado" ValueProperty="importe">
+                            <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
+                            <RadzenSeriesDataLabels Visible="false" />
+                        </RadzenLineSeries>
+                        <RadzenCategoryAxis Padding="20" />
+                        <RadzenValueAxis Formatter="@FormatAsUSD">
+                            <RadzenGridLines Visible="true" />
+                            <RadzenAxisTitle Text="Importe" />
+                        </RadzenValueAxis> 
+                    </RadzenChart>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenStack>
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+
+    DataItem[] PZinicial = new DataItem[0];
+    DataItem[] PZcontado = new DataItem[0];
+
+
+    private List<PeriodoDTO> listPeriodo = new List<PeriodoDTO>();
+    private List<ReporteDTO> listReporte = new List<ReporteDTO>();
+
+    string periodo = string.Empty;
+
+    string? periodoP1;
+    double inicialP1;
+    double contadoP1;
+
+    string? periodoP2;
+    double inicialP2;
+    double contadoP2;
+
+    string? periodoP3;
+    double inicialP3;
+    double contadoP3;
+
+
+    [Inject]
+    private InputsDataService InputsDataService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loading.Show();
+        listPeriodo = await InputsDataService.GetPeriodoAsync();
+
+        List<string> periodosData = new List<string>();
+        List<double> CinicialData = new List<double>();
+        List<double> CcontadaData = new List<double>();
+        List<double> IinicialData = new List<double>();
+        List<double> IcontadaData = new List<double>();
+        int repeticiones = 0;
+        if(listPeriodo.Count() >= 6)
+        {
+            repeticiones = 6;
+        } else
+        {
+            repeticiones = listPeriodo.Count();
+        }
+        for(int i=0; i<repeticiones; i++)
+        {
+            double sumaInicial = 0;
+            double sumaContado = 0;
+            double sumaImpIncial = 0;
+            double sumaImpContado = 0;
+            periodo = listPeriodo[i].periodo!;
+            listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+            if(listReporte.Count() != 0)
+            {
+                foreach (var report in listReporte)
+                {
+                    sumaInicial = sumaInicial + report.cantidad_inicial;
+                    sumaContado = sumaContado + report.cantidad_contada;
+                    sumaImpIncial = sumaImpIncial + report.importe_inicial;
+                    sumaImpContado = sumaImpContado + report.importe_contada;
+                }
+
+                periodosData.Add(periodo);
+                CinicialData.Add(sumaInicial);
+                CcontadaData.Add(sumaContado);
+                IinicialData.Add(sumaImpIncial);
+                IcontadaData.Add(sumaImpContado);
+            } 
+        }
+
+        PZinicial = new DataItem[CinicialData.Count];
+        PZcontado = new DataItem[CinicialData.Count];
+
+        for (int j = 0; j < CinicialData.Count; j++)
+        {
+            PZinicial[j] = new DataItem
+                {
+                    periodo = periodosData[j],
+                    cantidad = CinicialData[j],
+                    importe = IinicialData[j]
+                };
+            PZcontado[j] = new DataItem
+                {
+                    periodo = periodosData[j],
+                    cantidad = CcontadaData[j],
+                    importe = IcontadaData[j]
+                };
+        }
+        Loading.Hide();
+    }
+
+
+    class DataItem
+    {
+        public string? periodo { get; set; }
+        public double cantidad{ get; set; }
+        public double importe { get; set; }
+
+    }
+
+    string FormatAsUSD(object value)
+    {
+        return ((double)value).ToString("C0", CultureInfo.CreateSpecificCulture("en-US"));
+    }
+}

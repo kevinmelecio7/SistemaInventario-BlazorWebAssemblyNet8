@@ -1,0 +1,635 @@
+﻿@page "/registrosActuales"
+
+@* <style>
+    .rz-grid-table {
+        width: unset;
+    }
+</style> *@
+
+<AuthorizeView Roles="Admin">
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <h3>Registros Actuales</h3>
+        <br/><br/>
+
+        <div style="width:auto; overflow-x: auto;">
+            <RadzenDataGrid @ref="registrosGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true" FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.And" AllowColumnResize="true"
+                            Data="listReporte" TItem="ReporteDTO" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" Sort="@Reset" Filter="@Reset" class="responsive-table">
+                <Columns>
+                    <RadzenDataGridColumn Property="folio" Title="Folio" />
+                    <RadzenDataGridColumn Property="estado" Title="Estado" >
+                        <Template Context="data">
+                            @if (data.estado == "CANCELADO")
+                            {
+                                <div class="rz-background-color-danger-light">
+                                    <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                </div>
+                            }
+                            else if (data.estado == "AUDITADO")
+                            {
+                                <div class="rz-background-color-warning-light">
+                                    <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                </div>
+                            }
+                            else if (data.estado == "PENDIENTE")
+                            {
+                                <div class="rz-background-color-secondary-lighter">
+                                    <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                </div>
+                            }
+                            else if (data.estado == "ADICIONAL 2DO" || data.estado == "PRECARGADO 2DO")
+                            {
+                                <div class="rz-background-color-info-lighter">
+                                    <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div>
+                                    <span style='color: var(--rz-color-white)'>@data.estado</span>
+                                </div>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Property="storage_bin" Title="Storage" Width="6rem" />
+                    <RadzenDataGridColumn Property="material_number" Title="Material" />
+                    <RadzenDataGridColumn Property="material_descripcion" Title="Descripcion" />
+                    <RadzenDataGridColumn Property="cantidad_inicial" Title="C. Inicial" Width="7rem" />
+                    <RadzenDataGridColumn Property="cantidad_contada" Title="C. Contado" Width="7rem" >
+                        <Template Context="data">
+                            @if (data.estado == "PENDIENTE")
+                            {
+                                <div>
+                                    <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                </div>
+                                return;
+                            }
+                            else if (data.estado == "AUDITADO")
+                            {
+                                <div>
+                                    <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                </div>
+                                return;
+                            }
+
+                            @if (data.cantidad_segundo == -1)
+                            {
+                                <div>
+                                    <span style='color: var(--rz-color-white)'>@data.cantidad_contada</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="rz-background-color-info-lighter">
+                                    <span style='color: var(--rz-color-white)'>@data.cantidad_segundo</span>
+                                </div>
+                            }
+
+                            
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Property="diferencia_cantidad" Title="Dif." Width="5rem" />
+                    <RadzenDataGridColumn Context="registro" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="7rem">
+                        <Template Context="registro">
+                            @if(registro.estado != "CANCELADO")
+                            {
+                                @if (registro.folio![0] == 'A')
+                                {
+                                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
+                                                  Click="@(args => DeleteRow(registro))" @onclick:stopPropagation="true">
+                                    </RadzenButton>
+                                }
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
+                                              Click="@(args => EditRow(registro))" @onclick:stopPropagation="true">
+                                </RadzenButton>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </div>
+
+        @if (showDelete)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="0rem" class="rz-p-1">
+                                <RadzenText TextStyle="TextStyle.H6" TextAlign="TextAlign.Center">¿Estas seguro(a) de eliminar el siguiente registro?</RadzenText>
+                                <div class="rz-background-color-warning">
+                                    <span style='color: var(--rz-color-white)'>
+                                        <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Center"><strong>No se podra recuperar la siguiente información</strong></RadzenText>
+                                    </span>
+                                </div>
+                            </RadzenStack>
+                        </div>
+                        <RadzenStack class="p-2">
+                            <RadzenFieldset Text="Informacion">
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Folio" Component="folio" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.DisplayH4">@selectedRegistro.folio</RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Material" Component="turno" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.material_number </b>  </RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Descripcion" Component="descripcion" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.material_descripcion </b>  </RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Storage Bin y Type" Component="storagebin" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.storage_bin </b> - <b> @selectedRegistro.storage_type </b>  </RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                                @if (selectedRegistro.cantidad_inicial != 0)
+                                {
+                                    <div class="p-0">
+                                        <RadzenRow AlignItems="AlignItems.Center">
+                                            <RadzenColumn Size="12" SizeMD="4">
+                                                <RadzenLabel Text="Cantidad Inicial" Component="cantidadInicial" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="12" SizeMD="8">
+                                                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.cantidad_inicial PZ </b>  </RadzenText>
+                                            </RadzenColumn>
+                                        </RadzenRow>
+                                    </div>
+                                }
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Cantidad Contada" Component="cantidadContada" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.cantidad_contada PZ</b>  </RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                                <div class="p-0">
+                                    <RadzenRow AlignItems="AlignItems.Center">
+                                        <RadzenColumn Size="12" SizeMD="4">
+                                            <RadzenLabel Text="Segundo Conteo" Component="cantidadSegundo" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="12" SizeMD="8">
+                                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.cantidad_segundo PZ</b>  </RadzenText>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </div>
+                            </RadzenFieldset>
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" Class="rz-mt-8 rz-mb-4">
+                            <RadzenButton ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Medium" Icon="delete" Text="ELIMINAR REGISTRO " Click="()=>eliminarRegistro()" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Medium" Icon="cancel" Variant="Variant.Flat" Text="CANCELAR" Click="()=>{showDelete = false;}" />
+                        </RadzenStack>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showEdit)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+
+                            <RadzenColumn Size="12" SizeMD="6">
+                                <RadzenStack class="p-2">
+                                    <RadzenFieldset Text="Editar cantidad">
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Folio" Component="folio" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenText TextStyle="TextStyle.DisplayH4">@selectedRegistro.folio</RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Material" Component="turno" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.material_number </b>  </RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Descripcion" Component="descripcion" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.material_descripcion </b>  </RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Storage Bin" Component="storagebin" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.storage_bin </b>  </RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                        @if (selectedRegistro.cantidad_inicial != 0)
+                                        {
+                                            <div class="p-0">
+                                                <RadzenRow AlignItems="AlignItems.Center">
+                                                    <RadzenColumn Size="12" SizeMD="4">
+                                                        <RadzenLabel Text="Cantidad Inicial" Component="cantidadInicial" />
+                                                    </RadzenColumn>
+                                                    <RadzenColumn Size="12" SizeMD="8">
+                                                        <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.cantidad_inicial PZ </b>  </RadzenText>
+                                                    </RadzenColumn>
+                                                </RadzenRow>
+                                            </div>
+                                        }
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Cantidad Contada" Component="cantidadContada" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left" class="rz-pt-0"><b> @selectedRegistro.cantidad_contada PZ</b>  </RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                    @if (selectedRegistro.estado != "PENDIENTE")
+                                    {
+                                        <div class="p-0">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Segundo Conteo" Component="cantidadSegundo" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenNumeric TValue="int" Min=0 Value=@segundoConteo Change=@(args => segundoConteo = args) />
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                        </div>
+                                    }
+                                    </RadzenFieldset>
+                                </RadzenStack>
+                            </RadzenColumn>
+                        @if (selectedRegistro.estado != "PENDIENTE")
+                        {
+                            <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Center" Gap="1rem" Class="rz-mt-8 rz-mb-4">
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem">
+                                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Medium" Icon="delete" Text="CANCELAR" Click="()=>cancelarRegistro()" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem">
+                                    <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Medium" Icon="save" Text="GUARDAR SEGUNDO CONTEO" Click="()=>actualizarSegundoConteo()" />
+                                    <RadzenButton ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Medium" Icon="cancel" Variant="Variant.Flat" Text="CANCELAR" Click="()=>{showEdit = false; segundoConteo = 0;}" />
+                                </RadzenStack>
+                            </RadzenStack>
+                        } else
+                        {
+                            <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Center">
+                                <strong>¿Revisaste fisicamente y no se encuentra?</strong><br /> Se cambiará el estado PENDIENTE a AUDITADO.
+                                </RadzenText>
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" Class="rz-mt-8 rz-mb-4">
+                                <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Medium" Icon="save" Text="VALIDAR REGISTRO" Click="()=>validarAuditado()" /> 
+                                <RadzenButton ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Medium" Icon="cancel" Variant="Variant.Flat" Text="CANCELAR" Click="()=>{showEdit = false; segundoConteo = 0;}" />
+                            </RadzenStack>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        }
+
+
+
+        @* *******   LOADING   ******* *@
+        @if (Loading.showLoading)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display: block">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <div class="d-flex align-items-center start">
+                                <div class="spinner-border" aria-hidden="true"></div>
+                                <strong role="status" class="ps-3">@Loading.messageLoading</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   MODAL   ******* *@
+        @if (Modal.showModal)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5">@Modal.TitleModal</h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+                                @if (Modal.ModalIcon.Length != 0)
+                                {
+                                    <img src="@Modal.ModalIcon" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+                                }
+                                <div class="p-2 fs-5">@Modal.MessageModal</div>
+                            </div>
+                            @if (Modal.MessageSecondary.Length != 0)
+                            {
+                                <div class="d-flex flex-row mb-3 align-items-center">
+                                    <div class="p-2 fs-5">@Modal.MessageSecondary</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-@(Modal.MessageType.Length != 0 ? Modal.MessageType.ToLower() :"light" )" @onclick="() => Modal.Hide()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    RadzenDataGrid<ReporteDTO> registrosGrid;
+    private List<ReporteDTO> registros;
+    ReporteDTO selectedRegistro = new ReporteDTO();
+
+    bool showEdit = false;
+    bool showDelete = false;
+
+    List<ReporteDTO> registrosToInsert = new List<ReporteDTO>();
+    List<ReporteDTO> registrosToUpdate = new List<ReporteDTO>();
+
+    string periodo = string.Empty;
+    int segundoConteo = 0;
+    string usuario = string.Empty;
+
+    private List<PeriodoDTO> listPeriodo = new List<PeriodoDTO>();
+    private List<ReporteDTO> listReporte = new List<ReporteDTO>();
+    private List<ReporteDTO> listPrecargado = new List<ReporteDTO>();
+    private List<ReporteDTO> listAdicional = new List<ReporteDTO>();
+    List<InitialLoadDTO> listInitial = new List<InitialLoadDTO>();
+    List<InitialLoadDTO> listInitialResultado = new List<InitialLoadDTO>();
+    List<MasterDataDTO> listMaterial = new List<MasterDataDTO>();
+    private List<ReporteDTO> listPendientes = new List<ReporteDTO>();
+
+    [Inject]
+    private InputsDataService InputsDataService { get; set; }
+
+    [Inject]
+    private IJSRuntime JS { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loading.Show();
+        listPeriodo = await InputsDataService.GetPeriodoAsync();
+        if (listPeriodo.Count() == 0)
+        {
+            Modal.Show("NO HAY UN PERIDIO POR EL MOMENTO", "ERROR", Message.WARNING, Icon.WARNING);
+            Loading.Hide();
+            return;
+        }
+        periodo = listPeriodo[0].periodo!;
+        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        if (listReporte.Count() == 0)
+        {
+            Modal.Show("NO HAY REGISTRO EN EL ULTIMO PERIODO", "ERROR", Message.WARNING, Icon.WARNING);
+            Loading.Hide();
+            return;
+        }
+
+        foreach (var item in listReporte)
+        {
+            if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
+            {
+                if(item.estado == "PRECARGADO")
+                    item.estado = "PRECARGADO 2DO";
+                else 
+                    item.estado = "ADICIONAL 2DO";
+            }
+        }
+
+        listMaterial = await InputsDataService.GetMasterDataAsync(listPeriodo[0].id);
+        listPrecargado = listReporte.Where(x => x.estado == "PRECARGADO").ToList();
+        listAdicional = listReporte.Where(x => x.estado == "ADICIONAL").ToList();
+        listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+        foreach (var p in listPendientes)
+        {
+            listReporte.Add(p);
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            usuario = user.Identity.Name!;
+        }
+        Loading.Hide();
+    }
+
+    async Task EditRow(ReporteDTO reg)
+    {
+        selectedRegistro = reg;
+        if(reg.cantidad_segundo == -1)
+            segundoConteo = 0;
+        else
+            segundoConteo = Convert.ToInt32(reg.cantidad_segundo);
+        showEdit = true;
+    }
+
+    async Task validarAuditado()
+    {
+        Loading.Show();
+        //  1.Cambiar el estado de "PENDIENTE" a "AUDITADO" en la tabla de 'saldos_iniciales'
+        InitialLoadDTO updateInitial = new InitialLoadDTO();
+        updateInitial.folio = selectedRegistro.folio;
+        updateInitial.estado = "AUDITADO";
+        string result1 = await InputsDataService.UpdateInitialLoadEstadoAsync(updateInitial);
+        if (result1 == "Error")
+        {
+            Modal.Show("ERROR AL CAMBIAR ESTADO A 'AUDITADO' EL FOLIO " + selectedRegistro.folio, "ERROR", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+
+        selectedRegistro = new ReporteDTO();
+        await OnInitializedAsync();
+        showEdit = false;
+        segundoConteo = 0;
+        Modal.Show("FOLIO " + selectedRegistro.folio + " AUDITADO", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        Loading.Hide();
+    }
+
+    async Task cancelarRegistro()
+    {
+        Loading.Show();
+        ReporteDTO reporte = new ReporteDTO();
+        // actualizar a selectedRegistro.folio estado
+        reporte = new ReporteDTO
+        {
+            id = selectedRegistro.id,
+            folio = selectedRegistro.folio,
+            estado = "CANCELADO",
+            unit_standard_cost = 0,
+            cantidad_inicial = 0,
+            cantidad_contada = 0,
+            diferencia_cantidad = 0,
+            porcentaje_diferencia = 0,
+            importe_inicial = 0,
+            importe_contada = 0,
+            diferencia_importe = 0,
+            porcentaje_variacion_importe = 0,
+            usuario = usuario
+        };
+        string result1 = await InputsDataService.UpdateReporteTodosCamposAsync(reporte);
+        if (result1 == "Error")
+        {
+            Modal.Show("ERROR AL CANCELAR FOLIO " + selectedRegistro.folio, "CANCELADO", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+
+        selectedRegistro = new ReporteDTO();
+        await OnInitializedAsync();
+        showEdit = false;
+        segundoConteo = 0;
+        Modal.Show("FOLIO " + selectedRegistro.folio + " CANCELADO", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
+        Loading.Hide();
+    }
+
+    async Task actualizarSegundoConteo()
+    {
+        Loading.Show();
+        // listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
+        // listInitialResultado = listInitial.Where(x => x.storage_bin == selectedRegistro.storage_bin).Where(y => y.material_number == selectedRegistro.material_number).ToList();
+        ReporteDTO reporte = new ReporteDTO();
+        if (selectedRegistro.folio![0] == 'A') //registro adicional
+        {
+            MasterDataDTO material = new MasterDataDTO();
+            material = listMaterial.Where(item => item.materialID == selectedRegistro.material_number).FirstOrDefault()!;
+            reporte = new ReporteDTO
+                {
+                    id = selectedRegistro.id,
+                    cantidad_segundo = segundoConteo,
+                    diferencia_cantidad = 0,
+                    porcentaje_diferencia = 0,
+                    importe_inicial = 0,
+
+                    importe_contada = material.unit_price * segundoConteo,
+                    diferencia_importe = 0,
+                    porcentaje_variacion_importe = 0,
+                };
+        }
+        else //registro dentro del INITIAL LOAD
+        {
+            listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
+            listInitialResultado = listInitial.Where(x => x.storage_bin == selectedRegistro.storage_bin).Where(y => y.material_number == selectedRegistro.material_number).ToList();
+            reporte = new ReporteDTO
+                {
+                    id = selectedRegistro.id,
+                    cantidad_segundo = segundoConteo,
+                    diferencia_cantidad = segundoConteo - listInitialResultado[0].total_quantity,
+                    porcentaje_diferencia = (((segundoConteo - listInitialResultado[0].total_quantity) * 100) / listInitialResultado[0].total_quantity),
+                    importe_inicial = listInitialResultado[0].total_cost,
+
+                    importe_contada = ((segundoConteo * listInitialResultado[0].total_cost) / listInitialResultado[0].total_quantity),
+                    diferencia_importe = ((segundoConteo * listInitialResultado[0].total_cost) / listInitialResultado[0].total_quantity) - listInitialResultado[0].total_cost,
+                    porcentaje_variacion_importe = ((((segundoConteo * listInitialResultado[0].total_cost) / listInitialResultado[0].total_quantity) - listInitialResultado[0].total_cost) * 100) / listInitialResultado[0].total_quantity,
+                };
+        }
+        string result1 = await InputsDataService.UpdateReporteAsync(reporte);
+        if (result1 == "Error")
+        {
+            Modal.Show("ERROR AL INGRESAR SEGUNDA CANTIDAD", "ERROR", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+
+        selectedRegistro = new ReporteDTO();
+        await OnInitializedAsync();
+        showEdit = false;
+        segundoConteo = 0;
+        Loading.Hide();
+    }
+
+    async Task DeleteRow(ReporteDTO reg)
+    {
+        selectedRegistro = reg;
+        showDelete = true;
+    }
+
+    async Task eliminarRegistro()
+    {
+        Loading.Show();
+        //obtener el id de selectedRegistro y enviarlo para eliminarlo
+        ReporteDTO reporteT = selectedRegistro;
+        string result1 = await InputsDataService.DeleteReporteAsync(reporteT);
+        if (result1 == "Error")
+        {
+            Modal.Show("ERROR AL INGRESAR SEGUNDA CANTIDAD", "ERROR", Message.ERROR, Icon.ERROR);
+            Loading.Hide();
+            return;
+        }
+
+        selectedRegistro = new ReporteDTO();
+        await OnInitializedAsync();
+        showDelete = false;
+        segundoConteo = 0;
+        Loading.Hide();
+        Modal.Show("EL REGISTRO HA SIDO ELIMINADO", "ELIMINADO", Message.SUCCESS, Icon.SUCCESS);
+    }
+
+    void Reset()
+    {
+        registrosToInsert.Clear();
+        registrosToUpdate.Clear();
+    }
+
+    void Reset(ReporteDTO reg)
+    {
+        registrosToInsert.Remove(reg);
+        registrosToUpdate.Remove(reg);
+    }
+
+    void OnUpdateRow(ReporteDTO reg)
+    {
+        Reset(reg);
+    }
+
+    void OnCreateRow(ReporteDTO reg)
+    {
+        registrosToInsert.Remove(reg);
+    }
+
+}

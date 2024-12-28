@@ -1,0 +1,22 @@
+﻿@page "/logout"
+@inject ISessionStorageService sessionStorage;
+
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        LoginResponse response = await accountService.LogoutAsync();
+        if (!response.Flag)
+        {
+            await js.InvokeVoidAsync("alert", response.Message);
+            return;
+        }
+        
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        customAuthStateProvider.UpdateNotAuthenticationState();
+        await sessionStorage.SetItemAsync("logout", "Logout succesfull");
+        NavManager.NavigateTo("/", true);
+    }
+
+}

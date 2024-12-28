@@ -1,0 +1,705 @@
+﻿@page "/registro"
+<link rel="stylesheet" href="app.css" />
+
+@* <style>
+    .large-font-input {
+            font-size: 60px !important; /* Tamaño de la letra */ /*
+                padding: 40px !important; /* Espacio interno */ /*
+        }
+</style> *@
+
+<AuthorizeView Roles="User">
+    <NotAuthorized>
+        <NotAuthorizedPage />
+    </NotAuthorized>
+    <Authorized>
+        <h3>Registro</h3>
+
+        <RadzenStack>
+            <RadzenFieldset Text="Ingresa valores" class="rz-background-color-base-100">
+                <RadzenStack Gap="1rem">
+                    <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Numero de Parte </RadzenText>
+                            <RadzenTextBox @bind-Value="materialNPTXT" @onkeydown=@(e => enter(e, 1)) @ref="materialTextBox" Disabled="enableMaterial" aria-label="Default TextBox" Placeholder="Ingresa Numero de Parte" class="form-control large-font-input" />
+                        @* <RadzenColumn Size="2">
+                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Numero de Parte </RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn Size="10">
+                            <RadzenTextBox @bind-Value="materialNPTXT" @onkeydown=@(e => enter(e, 1)) @ref="materialTextBox" Disabled="enableMaterial" aria-label="Default TextBox" Placeholder="Ingresa Numero de Parte" class="form-control large-font-input" />
+                        </RadzenColumn> *@
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.DisplayH6" TextAlign="TextAlign.Left" class="rz-pt-1"><b> @descripcion </b>  </RadzenText>
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Storage Bin </RadzenText>
+                            <RadzenTextBox @bind-Value="storageTXT" @onkeydown=@(e => enter(e, 2)) Style="width: 100%" Disabled="enableStorage" aria-label="Default TextBox" Placeholder="Ingresa Storage Bin" class="form-control large-font-input" />
+                        @* <RadzenColumn Size="2">
+                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Storage Bin </RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn Size="10">
+                            <RadzenTextBox @bind-Value="storageTXT" @onkeydown=@(e => enter(e, 2)) Style="width: 100%" Disabled="enableStorage" aria-label="Default TextBox" Placeholder="Ingresa Storage Bin" class="form-control large-font-input" />
+                        </RadzenColumn> *@
+                    </RadzenRow>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenStack>
+        <br />
+        @if (vacio)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5">PRECAUCION</h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+                                <img src="@Icon.WARNING" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+                                <div class="p-2 fs-5">EL ADMINISTRADOR AUN NO HA ACTIVDADO EL PERIODO O AUN NO AGREGA LOS PARAMETROS PARA EL ESCANEO</div>
+                            </div>
+                            @if (Modal.MessageSecondary.Length != 0)
+                            {
+                                <div class="d-flex flex-row mb-3 align-items-center">
+                                    <div class="p-2 fs-5">RECARGE LA PAGINA CUANDO SE LE NOTIFIQUE EL CAMBIO DE PERIODO</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-@Message.WARNING" @onclick="() => btnHome()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+
+
+        @* COLOCAR CONIDCION, SI NO EXISTE ALGUNO DE LOS DOS, MOSTRAR BOTON DE CAPTURA ADICIONAL*@
+        @if (enableAdicional)
+        {
+            <RadzenRow AlignItems="AlignItems.Start">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-pt-2 rz-color-danger"><b> Los valores no existen en el reporte inicial o ya fueron registrados anteriormente. ¿Deseas realizar la captura adicional?  </b></RadzenText>
+            </RadzenRow>
+            <RadzenRow AlignItems="AlignItems.Center">
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenButton Click="()=>modeCapturaAdicional()" Text="Captura Adicional" Icon="add_circle" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Large" />
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="6">
+                    <RadzenButton Click="()=>refresh()" Text="Intentar de nuevo" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Large" />
+                </RadzenColumn>
+            </RadzenRow>
+            <br />
+        }
+
+        @if (capturaAdicional)
+        {
+            <RadzenRow AlignItems="AlignItems.Start">
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-pt-2 rz-color-info"><b> Modo Captura Adicional </b> </RadzenText>
+                </RadzenColumn>
+            </RadzenRow>
+        }
+
+
+
+
+        @* COLOCAR CONDICION, SI EXISTE AMBOS VALORES, MOSTRAR CANTIDAD*@
+        @if (enableGuardado)
+        {
+            <br />
+            <RadzenStack>
+                <RadzenFieldset Text="Ingresa Cantidad" class="rz-background-color-base-100">
+                    <RadzenStack Gap="1rem">
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Cantidad </RadzenText>
+                            <RadzenTextBox @bind-Value="cantidad" Style="width: 100%" aria-label="Default TextBox" Placeholder="Ingresa Cantidad" class="form-control large-font-input" />
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenFieldset>
+            </RadzenStack>
+            <br />
+            <RadzenStack Gap="1rem">
+                <RadzenButton Click="()=>BuscaFolio()" Text="Guardar" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large" />
+                <br />
+                <RadzenButton Click="()=>refresh()" Text="Realizar nueva captura" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Large" />
+            </RadzenStack>
+            <br />
+            <br />
+        }
+
+
+         
+        @* GUARDAR REGISTRO *@
+        @if (seguroGuardar)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5"><b>¿Estas seguro(a) de guardar?</b></h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+
+                                <img src="@Icon.INFORMATION" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+
+                                <div class="p-2 fs-5">
+                                    Se registrará <b>@cantidad PZ</b> del material <b>@descripcion</b> en el storage bin <b>@storageTXT</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-danger" @onclick="() => {seguroGuardar = false; folio = string.Empty;}">CANCELAR</button>
+                            <button type="button" class="btn btn-primary" @onclick="() => Guardado()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   LOADING   ******* *@
+        @if (Loading.showLoading)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display: block">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <div class="d-flex align-items-center start">
+                                <div class="spinner-border" aria-hidden="true"></div>
+                                <strong role="status" class="ps-3">@Loading.messageLoading</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* *******   MODAL   ******* *@
+        @if (Modal.showModal)
+        {
+            <div class="modal fade show bg-black bg-opacity-50" style="display:block;" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-bottom-0">
+                            <h1 class="modal-title fs-5">@Modal.TitleModal</h1>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex flex-row mb-3 align-items-center">
+                                @if (Modal.ModalIcon.Length != 0)
+                                {
+                                    <img src="@Modal.ModalIcon" class="img-fluid" alt="Modal Icon" style="max-width: 50px; max-height: 50px;" />
+                                }
+                                <div class="p-2 fs-5">@Modal.MessageModal</div>
+                            </div>
+                            @if (Modal.MessageSecondary.Length != 0)
+                            {
+                                <div class="d-flex flex-row mb-3 align-items-center">
+                                    <div class="p-2 fs-5">@Modal.MessageSecondary</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-@(Modal.MessageType.Length != 0 ? Modal.MessageType.ToLower() :"light" )" @onclick="() => Modal.Hide()">ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+    private RadzenTextBox materialTextBox;
+
+    string materialNPTXT = "";
+    string descripcion = "";
+    string storageTXT = "";
+    string cantidad = "";
+    string folio = string.Empty;
+
+    bool enableMaterial = false;
+    bool enableStorage = false;
+    bool enableAdicional = false;
+    bool enableGuardado = false;
+    bool seguroGuardar = false;
+
+
+    bool capturaAdicional = false;
+    bool vacio = false;
+
+    // bool materialValid = false;
+    // bool storageValid = false;
+
+
+    [Inject]
+    private InputsDataService InputsDataService { get; set; }
+
+    private List<PeriodoDTO> listPeriodo = new List<PeriodoDTO>();
+    PeriodoDTO peridoActual = new PeriodoDTO();
+    // List<InitialLoadDTO> listInitial = new List<InitialLoadDTO>();
+    // List<InitialLoadDTO> listInitialResultado = new List<InitialLoadDTO>();
+
+    List<StorageBinDTO> listStorage = new List<StorageBinDTO>();
+    StorageBinDTO storage = new StorageBinDTO();
+    List<MasterDataDTO> listMaterial = new List<MasterDataDTO>();
+    MasterDataDTO material = new MasterDataDTO();
+
+    public class InitialMaterial
+    {
+        public string? MaterialNumber { get; set; }
+        public string? MaterialDescription { get; set; }
+    }
+
+    public class InitialStorage
+    {
+        public string? StorageBin { get; set; }
+    }
+
+    // List<InitialMaterial> listInitialMaterial = new List<InitialMaterial>();
+    // List<InitialStorage> listInitialStorage= new List<InitialStorage>();
+
+    string usuario = string.Empty;
+
+    private DateTime lastKeyPressTime;
+    private bool isScannerInput;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loading.Show();
+        listPeriodo = await InputsDataService.GetPeriodoAsync();
+        if (listPeriodo.Count() > 0 && listPeriodo[0].activo == 1)
+        {
+            vacio = false;
+            peridoActual = listPeriodo[0];
+            // listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
+            // listInitial = listInitial.Where(item => item.estado != "CONTADO").ToList();
+            // listInitialMaterial = listInitial.GroupBy(x => new { x.material_number, x.material_description })
+            //                                         .Select(y => new InitialMaterial
+            //                                         {
+            //                                             MaterialNumber = y.Key.material_number,
+            //                                             MaterialDescription = y.Key.material_description
+            //                                         }).ToList();
+            // listInitialStorage = listInitial.GroupBy(x => new { x.storage_bin })
+            //                                         .Select(y => new InitialStorage
+            //                                         {
+            //                                             StorageBin = y.Key.storage_bin
+            //                                         }).ToList();
+            listStorage = await InputsDataService.GetStorageAsync(listPeriodo[0].id);
+            listMaterial = await InputsDataService.GetMasterDataAsync(listPeriodo[0].id);
+
+            //obtener usuario
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                usuario = user.Identity.Name!;
+            }
+            // if (listInitial.Count() == 0 || listStorage.Count() == 0 || listMaterial.Count() == 0)
+            // {
+            //     Loading.Hide();
+            //     vacio = true;
+            //     return;
+            // }
+            var listInitialFirst = await InputsDataService.GetInitialLoadFirstAsync(listPeriodo[0].id);
+            if (listInitialFirst[0].estado == "" || listInitialFirst[0].estado is null)
+            {
+                // Console.WriteLine("Debo generar un folio a todos los registros");
+                string result1 = await InputsDataService.UpdateInitialLoadFolioAsync();
+                if (result1 == "Error")
+                {
+                    Modal.Show("ERROR AL GENERAR FOLIOS", "ERROR", Message.ERROR, Icon.ERROR);
+                    Loading.Hide();
+                    return;
+                }
+            }
+        } 
+        else
+        {
+            vacio = true;
+        }
+        Loading.Hide();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await materialTextBox.FocusAsync();
+        }
+    }
+
+
+    private void btnHome()
+    {
+        NavManager.NavigateTo("home");
+    }
+
+
+    private async Task enter(KeyboardEventArgs e, int textbox)
+    {
+        if (e.Key == "Tab" || e.Key == "Enter")
+        {
+            Loading.Show();
+            await Task.Delay(1500);
+            Loading.Hide();
+            if (materialNPTXT != "" && materialNPTXT[0] == 'P')
+                materialNPTXT = materialNPTXT.Substring(1);
+
+            if (storageTXT != "" && storageTXT[0] == '0' && storageTXT[1] == '0')
+                storageTXT = storageTXT.Substring(3);
+
+            await validarCamposTexto(textbox);
+            Loading.Hide();
+        }
+    }
+
+    private async Task validarCamposTexto(int textbox)
+    {
+        Loading.Show();
+        if (capturaAdicional == false)
+        {
+
+            switch (textbox)
+            {
+                case 1:
+                    // bool validarExisteMaterial = listInitialMaterial.Any(item => item.MaterialNumber!.Equals(materialNPTXT, StringComparison.OrdinalIgnoreCase));
+                    // if (validarExisteMaterial)
+                    // {
+                    //     var material = listInitialMaterial.Where(x => x.MaterialNumber == materialNPTXT).FirstOrDefault();
+                    //     descripcion = material!.MaterialDescription!;
+                    // }
+                    var listInitialMaterial = await InputsDataService.GetInitialMaterialLoadAsync(listPeriodo[0].id, materialNPTXT);
+                    if (listInitialMaterial.Count() > 0)
+                    {
+                        var material = listInitialMaterial.Where(x => x.material_number == materialNPTXT).FirstOrDefault();
+                        descripcion = material!.material_description!;
+                    }
+
+                    if (storageTXT != "" && materialNPTXT != "")
+                        await validarInitial();
+                    break;
+
+                case 2:
+                    if (storageTXT != "" && materialNPTXT != "")
+                        await validarInitial();
+                    break;
+            }
+        } else {
+            switch (textbox)
+            {
+                case 1:
+                    material = listMaterial.Where(item => item.materialID == materialNPTXT).FirstOrDefault()!;
+                    if (material is not null)
+                    {
+                        descripcion = material.descripcion!;
+                    } else
+                    {
+
+                        Modal.Show($"EL NUMERO DE PARTE '{materialNPTXT}' NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING);
+                        materialNPTXT = "";
+                        Loading.Hide();
+                        return;
+                    }
+                    if (storageTXT != "" && materialNPTXT != "")
+                    {
+                        await validarInitial();
+                    }
+                    break;
+
+
+                case 2:
+                    storage = listStorage.Where(item => item.storagebin == storageTXT).FirstOrDefault()!;
+                    if(storage is null)
+                    {
+
+                        Modal.Show($"EL STORAGE BIN '{storageTXT}' NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING);
+                        storageTXT = "";
+                        Loading.Hide();
+                        return;
+                    }
+                    if (storageTXT != "" && materialNPTXT != "")
+                    {
+                        await validarInitial();
+                    }
+                    break;
+            }
+        }
+        Loading.Hide();
+    }
+
+    private async Task modeCapturaAdicional()
+    {
+        capturaAdicional = true;
+        enableAdicional = false;
+        enableMaterial = false;
+        enableStorage = false;
+        material = listMaterial.Where(item => item.materialID == materialNPTXT).FirstOrDefault()!;
+        storage = listStorage.Where(item => item.storagebin == storageTXT).FirstOrDefault()!;
+        if (material is null && storage is null)
+        {
+            materialNPTXT = "";
+            storageTXT = "";
+            capturaAdicional = false;
+            Modal.Show("NUMERO DE PARTE Y STORAGE BIN NO EXISTEN", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO NUMERO DE PARTE Y STORAGE BIN");
+            return;
+        }
+        if(material is null)
+        {
+            materialNPTXT = "";
+            capturaAdicional = false;
+            Modal.Show("NUMERO DE PARTE NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO NUMERO DE PARTE");
+            return;
+        }
+        if (storage is null)
+        {
+            storageTXT = "";
+            capturaAdicional = false;
+            Modal.Show("STORAGE BIN NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO STORAGE BIN");
+            return;
+        }
+        await validarCamposTexto(2);
+    }
+
+    private async Task validarInitial()
+    {
+        //se hace otra validacion ya que los campos hasta este momento aun son modificables
+        if (capturaAdicional == false)
+        {
+            if (materialNPTXT == "" && storageTXT == "")
+            {
+                Modal.Show("EXISTEN CAMPOS VACIOS", "PRECAUCION", Message.WARNING, Icon.WARNING);
+                return;
+            }
+            var listInitialResultado = await InputsDataService.GetInitialLoadMaterialxStorageAsync(peridoActual.id, materialNPTXT, storageTXT);
+            List<InitialLoadDTO> filtrolistInitialResultado = new List<InitialLoadDTO>();
+            if (listInitialResultado is not null || listInitialResultado!.Count() > 0)
+                filtrolistInitialResultado = listInitialResultado!.Where(X => X.estado == "PENDIENTE").ToList();
+            // listInitialResultado = listInitial.Where(x => x.storage_bin == storageTXT).Where(y => y.material_number == materialNPTXT).Where(z => z.fkPeriodo == peridoActual.id).ToList();
+
+            if (filtrolistInitialResultado.Count() == 0)
+            {
+                enableAdicional = true;
+                enableMaterial = true;
+                enableStorage = true;
+            }
+            else
+            {
+                enableGuardado = true;
+
+                enableMaterial = true;
+                enableStorage = true;
+            }
+        } else
+        {
+            material = listMaterial.Where(item => item.materialID == materialNPTXT).FirstOrDefault()!;
+            storage = listStorage.Where(item => item.storagebin == storageTXT).FirstOrDefault()!;
+            if (material is null && storage is null)
+            {
+                materialNPTXT = "";
+                storageTXT = "";
+                Modal.Show("NUMERO DE PARTE Y STORAGE BIN NO EXISTEN", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO NUMERO DE PARTE Y STORAGE BIN");
+                return;
+            }
+            if (material is null)
+            {
+                materialNPTXT = "";
+                Modal.Show("NUMERO DE PARTE NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO NUMERO DE PARTE");
+                return;
+            }
+            if (storage is null)
+            {
+                storageTXT = "";
+                Modal.Show("STORAGE BIN NO EXISTE", "PRECAUCION", Message.WARNING, Icon.WARNING, "INGRESA UN NUEVO STORAGE BIN");
+                return;
+            }
+
+            enableGuardado = true;
+
+            enableMaterial = true;
+            enableStorage = true;
+        }
+
+
+
+
+        // bool validarExisteMaterial = listInitialMaterial.Any(item => item.MaterialNumber!.Equals(materialNPTXT, StringComparison.OrdinalIgnoreCase));
+        // bool validarExisteStorage = listInitialStorage.Any(item => item.StorageBin!.Equals(storageTXT, StringComparison.OrdinalIgnoreCase));
+        // if (!validarExisteMaterial || !validarExisteStorage)
+        // {
+        //     Modal.Show("EXISTEN CAMPOS ", "PRECAUCION", Message.WARNING, Icon.WARNING);
+        //     return;
+        // }
+
+
+
+
+    }
+
+    private void refresh()
+    {
+        NavManager.NavigateTo("home");
+        NavManager.NavigateTo("registro");
+    }
+
+    private async Task BuscaFolio()
+    {
+        bool esNumerico = Int32.TryParse(cantidad, out int cantidadINT);
+        if (esNumerico == false)
+        {
+            Modal.Show("CANTIDAD INVALIDA", "ERROR", Message.ERROR, Icon.ERROR);
+            return;
+        }
+        if (cantidadINT <= 0)
+        {
+            Modal.Show("CANTIDAD INVALIDA", "ERROR", Message.ERROR, Icon.ERROR);
+            return;
+        }
+        // seguroGuardar = true;
+        await Guardado(); // la venatana de seguridad de guardado esta arriba un renglon arriba de este
+        //debe aplicarse cuando solo sea una captura manual
+    }
+
+    private async Task Guardado()
+    {
+        Loading.Show();
+        List<InitialLoadDTO> filtrolistInitialResultado = new List<InitialLoadDTO>();
+        if (!capturaAdicional)
+        {
+            var listInitialResultado = await InputsDataService.GetInitialLoadMaterialxStorageAsync(peridoActual.id, materialNPTXT, storageTXT);
+            if (listInitialResultado is not null || listInitialResultado!.Count() > 0)
+                filtrolistInitialResultado = listInitialResultado!.Where(X => X.estado == "PENDIENTE").ToList();
+            folio = filtrolistInitialResultado[0].folio!;
+            InitialLoadDTO updateInitial = filtrolistInitialResultado[0];
+            updateInitial.folio = folio;
+            updateInitial.estado = "CONTADO";
+
+            //  1.Cambiar el estado de "PENDIENTE" a "CONTADO" en la tabla de 'saldos_iniciales'
+            string result2 = await InputsDataService.UpdateInitialLoadEstadoAsync(updateInitial);
+            if (result2 == "Error")
+            {
+                Modal.Show("ERROR AL GENERAR FOLIOS", "ERROR", Message.ERROR, Icon.ERROR);
+                Loading.Hide();
+                return;
+            }
+            bool esNumerico = Int32.TryParse(cantidad, out int cantidadINT);
+
+            ReporteDTO reporte = new ReporteDTO
+                {
+                    folio = folio,
+                    periodo = peridoActual.periodo,
+                    estado = "PRECARGADO",
+                    storage_bin = filtrolistInitialResultado[0].storage_bin,
+                    storage_type = filtrolistInitialResultado[0].storage_type,
+                    material_number = filtrolistInitialResultado[0].material_number,
+                    material_descripcion = filtrolistInitialResultado[0].material_description,
+                    unit_standard_cost = filtrolistInitialResultado[0].unit_standard_cost,
+                    cantidad_inicial = filtrolistInitialResultado[0].total_quantity,
+                    cantidad_contada = cantidadINT,
+                    diferencia_cantidad = cantidadINT - filtrolistInitialResultado[0].total_quantity,
+                    porcentaje_diferencia = (((cantidadINT - filtrolistInitialResultado[0].total_quantity) * 100) / filtrolistInitialResultado[0].total_quantity),
+                    importe_inicial = filtrolistInitialResultado[0].total_cost,
+
+                    importe_contada = ((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity),
+                    diferencia_importe = ((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity) - filtrolistInitialResultado[0].total_cost,
+                    porcentaje_variacion_importe = ((((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity) - filtrolistInitialResultado[0].total_cost) * 100) / filtrolistInitialResultado[0].total_quantity,
+                    // importe_contada = listInitialResultado[0].unit_standard_cost * cantidad,
+                    // diferencia_importe = listInitialResultado[0].total_cost - (listInitialResultado[0].unit_standard_cost * cantidad),
+                    // porcentaje_variacion_importe = (100 - (((listInitialResultado[0].unit_standard_cost * cantidad) * 100) / listInitialResultado[0].total_cost)),
+                    usuario = usuario,
+                };
+
+            //  2.Insertar en la nueva tabla el registro del folio, cantidad, comparativa y
+            string result3 = await InputsDataService.InsertReporteAsync(reporte);
+            if (result3 == "Error")
+            {
+                Modal.Show("ERROR AL GENERAR GUARDAR NUEVO REGISTRO", "ERROR", Message.ERROR, Icon.ERROR);
+                Loading.Hide();
+                return;
+            }               
+
+
+            Loading.Hide();
+            seguroGuardar = false;
+            // Modal.Show("REGISTRO GUARDADO EXITOSAMENTE", "GUARDADO", Message.SUCCESS, Icon.SUCCESS, $"FOLIO {folio}");
+            // NotificationService.Notify(new NotificationMessage
+            //     {
+            //         Severity = NotificationSeverity.Success,
+            //         Summary = "Registro Guardado",
+            //         Detail = $"Folio {folio}",
+            //         Duration = 4000
+            //     });
+            folio = string.Empty;
+            refresh();
+        } else
+        {
+
+            //  REALIZAR UN FOLIO A(periodo)-(consecutivo), este consuecutivo se debe consultar desde la tabla nueva
+            string[] conPeriodo = peridoActual.periodo!.Split("-");
+            List<ReporteDTO> listRegistros = await InputsDataService.GetReportePorPeriodoAsync(peridoActual.periodo!);
+            if(listRegistros.Count() != 0)
+            {
+                //  Hacer una consulta con la tabla nueva, con los registros que inician con A y obtener el ultimo digito para agregarle 1
+                var registrosConA = listRegistros.Where(item => item.folio != null && item.folio.Contains("A"))
+                    .OrderByDescending(item => item.id).FirstOrDefault();
+                if (registrosConA is not null)
+                {
+                    string[] conFolio = registrosConA.folio!.Split("-");
+                    folio = conFolio[0] + "-" + (int.Parse(conFolio[1]) + 1);
+                } else
+                {
+                    folio = "A" + conPeriodo[0] + conPeriodo[1] + "-" + 1;
+                }
+            } else
+            {
+                folio = "A" + conPeriodo[0] + conPeriodo[1] + "-" + 1;
+            }
+            bool esNumerico = Int32.TryParse(cantidad, out int cantidadINT);
+            ReporteDTO reporte = new ReporteDTO
+                {
+                    folio = folio,
+                    periodo = peridoActual.periodo,
+                    estado = "ADICIONAL",
+                    storage_bin = storage.storagebin,
+                    storage_type = storage.storagetype,
+                    material_number = material.materialID,
+                    material_descripcion = material.descripcion,
+                    unit_standard_cost = material.unit_price,
+                    cantidad_inicial = 0,
+                    cantidad_contada = cantidadINT,
+                    diferencia_cantidad = 0,
+                    porcentaje_diferencia = 0,
+                    importe_inicial = 0,
+                    importe_contada = material.unit_price * cantidadINT,
+                    diferencia_importe = 0,
+                    porcentaje_variacion_importe = 0,
+                    usuario = usuario,
+                };
+
+            // Insertar en la nueva tabla el registro del folio
+            string result3 = await InputsDataService.InsertReporteAsync(reporte);
+            if (result3 == "Error")
+            {
+                Modal.Show("ERROR AL GENERAR GUARDAR NUEVO REGISTRO", "ERROR", Message.ERROR, Icon.ERROR);
+                Loading.Hide();
+                return;
+            }
+
+            Loading.Hide();
+            seguroGuardar = false;
+            // Modal.Show("REGISTRO GUARDADO EXITOSAMENTE", "GUARDADO", Message.SUCCESS, Icon.SUCCESS, $"FOLIO {folio}");
+            // NotificationService.Notify(new NotificationMessage
+            //     {
+            //         Severity = NotificationSeverity.Success,
+            //         Summary = "Registro Guardado",
+            //         Detail = $"Folio {folio}",
+            //         Duration = 4000
+            // });
+            refresh();
+        }
+
+    }
+}
