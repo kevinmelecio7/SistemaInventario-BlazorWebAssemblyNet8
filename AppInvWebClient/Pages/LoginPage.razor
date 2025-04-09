@@ -78,14 +78,18 @@
 }
 
 @code {
-    public LoginDTO Login = new();
+    public LoginDTO Login = new(); // Se inicializa un objeto para captura el correo(usuario) y contraseña.
+
+    // Método que se ejecuta cuando se carga la página
     protected override async Task OnInitializedAsync()
     {
-        LoginResponse response = await accountService.LogoutAsync();
+        LoginResponse response = await accountService.LogoutAsync(); // Cierra sesión por si anteriormente habia una cuenta abierta
         var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
-        customAuthStateProvider.UpdateNotAuthenticationState();
+        customAuthStateProvider.UpdateNotAuthenticationState(); // Restablece la autenticación
     }
 
+    
+    // Después de renderizar la página, verifica si hay un mensaje de logout en sessionStorage
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -100,30 +104,30 @@
     }
 
 
-
+    // Método ejecutado al hacer clic en el botón de login
     async Task LoginClicked()
     {
-        Loading.Show();
+        Loading.Show();  // Muestra un indicador de carga
         try
         {
-            LoginResponse response = await accountService.LoginAsync(Login);
+            LoginResponse response = await accountService.LoginAsync(Login); // Envía las credenciales
             if (!response.Flag)
             {
                 Loading.Hide();
-                await js.InvokeVoidAsync("alert", response.Message);
+                await js.InvokeVoidAsync("alert", response.Message); // Muestra error si las credenciales son incorrectas
                 return;
             }
 
             var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
-            customAuthStateProvider.UpdateAuthenticationState(response.JWTToken);
-            await sessionStorage.SetItemAsync("cuenta", Login.Email);
+            customAuthStateProvider.UpdateAuthenticationState(response.JWTToken); // Guarda el token de autenticación
+            await sessionStorage.SetItemAsync("cuenta", Login.Email); // Guarda el email del usuario por medio de sessionStorage en la variable "cuenta"
             Loading.Hide();
             NavManager.NavigateTo("/home", forceLoad: true);
         }
         catch (Exception ex)
         {
             Loading.Hide();
-            await js.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+            await js.InvokeVoidAsync("alert", $"Error: {ex.Message}"); // Manejo de errores
         }
     }
    

@@ -111,9 +111,6 @@
                                     <RadzenButton Variant="Variant.Flat" Text="DETALLES" ButtonStyle="ButtonStyle.Info" Click="@(()=>{showDetalles = true;})" />
                                 }
                             </RadzenColumn>
-                            @* <RadzenColumn Size="6" class=" rz-p-1">
-                                <span>Total Cantidad Contado: @((grid!.View.Cast<ReporteDTO>()?.Sum(item => item.cantidad_contada) ?? 0))</span>
-                            </RadzenColumn> *@
                         </RadzenRow>
 
                         <div class="p-0">
@@ -323,6 +320,7 @@
     [Inject]
     private IJSRuntime JS { get; set; }
 
+    // Inicializa el componente cargando los periodos disponibles
     protected override async Task OnInitializedAsync()
     {
         Loading.Show();
@@ -334,11 +332,21 @@
             return;
         }
 
+        foreach (var item in listPeriodo)
+        {
+            if(item.identificador != "")
+            {
+                item.periodo = $"{item.periodo}, {item.consecutivo}-{item.identificador}";
+            }
+
+        }
+
         periodo = listPeriodo[0].periodo!;
 
         Loading.Hide();
     }
 
+    // Busca y procesa los reportes del periodo seleccionado, ajustando estados y mostrando tabla o mensaje vacío
     private async Task buscarReporte()
     {
         if (periodo is null)
@@ -348,6 +356,7 @@
             return;
         }
 
+        //En caso de que periodo si existe, entonces traer informacion similar a la tabla que esta en la vista de RegistrosActuales.razor
         Loading.Show();
         listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
         foreach (var item in listReporte)
@@ -381,6 +390,9 @@
         Loading.Hide();
     }
 
+    //Genera archivo de excel por medio de NPOI ---- EL REPORTE ES DETALLADO 
+    // Mostrando los folios generados de los que se encuentren en la tabla "reporte"
+    // y tambien aquellos folios de la tabla "saldos_iniciales" con estados "PENDIENTES"
     private async Task exportarExcel()
     {
         Loading.Show();
@@ -499,6 +511,9 @@
         Loading.Hide();
     }
 
+    //Genera archivo de excel por medio de NPOI ---- EL REPORTE ES TOTALIZADO
+    // Mostrando solamente lo contado, es decir, la informacion que se enucentra en la tabla "reporte"
+    // Totalizado se refiere a que sea por material y su respectivo storagebin
     private async Task exportarTotalizadoExcel()
     {
         Loading.Show();
@@ -669,6 +684,9 @@
         Loading.Hide();
     }
 
+    //Genera archivo de texto como el REPORTE TOTALIZADO ---- EL REPORTE ES PARA SAP 
+    //cada que la lista lleve 333 registros, se hace el llamado al metodo de exportarSAPaTXT para generar el archivo de texto
+    // y despues se limpia la lista para esperar los siguientes registros que faltaron por crearse
     private async Task exportarSAP()
     {
         Loading.Show();
@@ -724,24 +742,6 @@
             }
         }
 
-        // // Construir el contenido del archivo de texto
-        // var sb = new StringBuilder();
-
-        // // Encabezados
-        // sb.AppendLine("Plant\tWarehouse\tBIN\tMaterial\tQuantity\tStockCategory\tStorageUnit\tStorageLocation");
-
-        // // Datos
-        // var cultureInfo = new System.Globalization.CultureInfo("en-US");
-        // foreach (var item in listReporteTotalizado)
-        // {
-        //     sb.AppendLine($"4300\t430\t{item.storage_type}{item.storage_bin}\t{item.material_number}\t{item.cantidad_contada.ToString("F3", cultureInfo)}\t1\t\t20");
-        // }
-        // await buscarReporte();
-
-        // // Convertir a base64 para la descarga
-        // var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString()));
-        // var fileContent = $"data:text/plain;base64,{content}";
-        // await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_TotalizadoSAP.txt");
 
         //lo de abajo es o nuevo
 
@@ -767,6 +767,7 @@
         Loading.Hide();
     }
 
+    //Genera archivo de texto por medio de NPOI
     private async Task exportarSAPaTXT(List<ReporteDTO> lista, int num)
     {
         // Construir el contenido del archivo de texto
@@ -788,106 +789,4 @@
         var fileContent = $"data:text/plain;base64,{content}";
         await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_TotalizadoSAP_{num}.txt");
     }
-
-    // private async Task exportarSAP()
-    // {
-    //     Loading.Show();
-    //     listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
-    //     listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList(); ;
-    //     List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
-
-    //     //**************************************/
-    //     listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
-    //     foreach (var p in listPendientes)
-    //     {
-    //         listReporte.Add(p);
-    //     }
-    //     //**************************************/
-
-
-    //     List<ReporteDTO> listReporteDuplicado = listReporte;
-
-    //     while (listReporteDuplicado.Count() != 0)
-    //     {
-    //         ReporteDTO objReporte = listReporteDuplicado[0];
-    //         var list = listReporteDuplicado.Where(x => x.storage_bin == objReporte.storage_bin).
-    //                                         Where(y => y.material_number == objReporte.material_number).ToList();
-
-    //         double cantidadInicial = 0;
-    //         double cantidadContada = 0;
-    //         double importeInicial = 0;
-    //         double importeContada = 0;
-    //         List<int> idXBorrar = new List<int>();
-    //         List<string> folioXBorrar = new List<string>();
-
-    //         foreach (var obj in list)
-    //         {
-    //             cantidadInicial = cantidadInicial + obj.cantidad_inicial;
-    //             @if (obj.cantidad_segundo == -1)
-    //                 cantidadContada = cantidadContada + obj.cantidad_contada;
-    //             else
-    //                 cantidadContada = cantidadContada + obj.cantidad_segundo;
-    //             importeInicial = importeInicial + obj.importe_inicial;
-    //             importeContada = importeContada + obj.cantidad_inicial;
-    //             if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
-    //             {
-    //                 folioXBorrar.Add(obj.folio!);
-    //             }
-    //             else
-    //             {
-    //                 idXBorrar.Add(obj.id);
-    //             }
-
-    //         }
-
-    //         ReporteDTO addObj = new ReporteDTO
-    //             {
-    //                 storage_bin = list[0].storage_bin,
-    //                 storage_type = list[0].storage_type,
-    //                 material_number = list[0].material_number,
-    //                 cantidad_contada = cantidadContada,
-    //             };
-
-    //         listReporteTotalizado.Add(addObj);
-
-    //         if (objReporte.estado == "PENDIENTE" || objReporte.estado == "AUDITADO")
-    //         {
-    //             foreach (var iden in folioXBorrar)
-    //             {
-    //                 listReporteDuplicado.RemoveAll(item => item.folio == iden);
-    //                 // Console.WriteLine($"[{iden}]");
-    //             }
-    //         }
-    //         else
-    //         {
-    //             // Console.WriteLine($"--> Para {objReporte.storage_bin} - {objReporte.material_number} ");
-    //             foreach (var iden in idXBorrar)
-    //             {
-    //                 listReporteDuplicado.RemoveAll(item => item.id == iden);
-    //                 // Console.WriteLine($"[{iden}]");
-    //             }
-    //         }
-
-    //     }
-    //     // Construir el contenido del archivo de texto
-    //     var sb = new StringBuilder();
-
-    //     // Encabezados
-    //     sb.AppendLine("Plant\tWarehouse\tBIN\tMaterial\tQuantity\tStockCategory\tStorageUnit\tStorageLocation");
-
-    //     // Datos
-    //     foreach (var item in listReporteTotalizado)
-    //     {
-    //         sb.AppendLine($"4300\t430\t{item.storage_type}{item.storage_bin}\t{item.material_number}\t{item.cantidad_contada}.000\t1\t\t20");
-    //     }
-    //     listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
-    //     await buscarReporte();
-
-    //     // Convertir a base64 para la descarga
-    //     var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString()));
-    //     var fileContent = $"data:text/plain;base64,{content}";
-    //     await JS.InvokeVoidAsync("downloadFile", fileContent, $"Reporte_{periodo}_Totalizado.txt");
-
-    //     Loading.Hide();
-    // }
 }

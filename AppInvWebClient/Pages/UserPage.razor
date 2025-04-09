@@ -24,10 +24,6 @@
             <RadzenDataGrid @ref="usersGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true" ColumnWidth="150rem" EditMode="@editMode"
                             Data="users" TItem="UserDTO" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" Sort="@Reset" Filter="@Reset">
 
-                @* <HeaderTemplate>
-
-            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar Nuevo Usuario" Click="@InsertRow" Disabled="@(editMode == DataGridEditMode.Single && usersToInsert.Count() > 0)" />
-            </HeaderTemplate>*@
                 <Columns>
                     <RadzenDataGridColumn Property="nombre" Title="Nombre" Width="200rem">
                         <EditTemplate Context="user">
@@ -156,16 +152,6 @@
                                             </RadzenColumn>
                                         </RadzenRow>
                                     </div>
-                                    @* <div class="p-2">
-                                <RadzenRow AlignItems="AlignItems.Center">
-                                <RadzenColumn Size="12" SizeMD="4">
-                                <RadzenLabel Text="Correo" Component="Email" />
-                                </RadzenColumn>
-                                <RadzenColumn Size="12" SizeMD="8">
-                                <RadzenTextBox @bind-Value="Register.Email" Style="width: 100%;" Name="Email" />
-                                </RadzenColumn>
-                                </RadzenRow>
-                                </div> *@
                                     <div class="p-2">
                                         <RadzenRow AlignItems="AlignItems.Center">
                                             <RadzenColumn Size="12" SizeMD="4">
@@ -284,28 +270,30 @@
 
     protected override async Task OnInitializedAsync()
     {
-        users = await userService.GetUserAsync();
+        users = await userService.GetUserAsync(); // Obtiene la lista de usuarios 
     }
 
-
+    // Reinicia las listas de inserción y actualización
     void Reset()
     {
         usersToInsert.Clear();
         usersToUpdate.Clear();
     }
 
+    // Elimina un usuario de las listas de inserción y actualización
     void Reset(UserDTO user)
     {
         usersToInsert.Remove(user);
         usersToUpdate.Remove(user);
     }
 
-
+    // Se ejecuta al actualizar una fila de la tabla
     void OnUpdateRow(UserDTO user)
     {
         Reset(user);
     }
 
+    // Agrega una nueva fila a la tabla para insertar un usuario
     async Task InsertRow()
     {
         if (editMode == DataGridEditMode.Single)
@@ -318,12 +306,13 @@
         newUser = true;
     }
 
+    // Se ejecuta cuando se crea un usuario en la tabla
     void OnCreateRow(UserDTO user)
     {
         usersToInsert.Remove(user);
     }
 
-
+    // Habilita la edición de una fila en la tabla
     async Task EditRow(UserDTO user)
     {
         Reset();
@@ -331,6 +320,7 @@
         await usersGrid.EditRow(user);
     }
 
+    // Elimina un usuario de la base de datos
     async Task DeleteRow(UserDTO user)
     {
         Loading.Show();
@@ -348,14 +338,15 @@
         Loading.Hide();
     }
 
+    // Guarda los cambios en un usuario (ya sea una inserción o actualización)
     async Task SaveRow(UserDTO user)
     {
         Loading.Show();
         if (newUser)
         {
             //insertar un nuevo usuario
-            Console.WriteLine("AGREGAR USUARIO--->");
-            Console.WriteLine($"Num: {user.correo} \n Nombre: {user.nombre} \n Rol: {user.rol}");
+            // Console.WriteLine("AGREGAR USUARIO--->");
+            // Console.WriteLine($"Num: {user.correo} \n Nombre: {user.nombre} \n Rol: {user.rol}");
             Modal.Show($"SE HA REGISTRADO EL NUEVO USUARIO CON ROL {user.rol}", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
         }
         else
@@ -374,6 +365,7 @@
         Loading.Hide();
     }
 
+    // Cancela la edición de un usuario y recarga los datos
     async Task CancelEdit(UserDTO user)
     {
         Loading.Show();
@@ -384,9 +376,11 @@
         Loading.Hide();
     }
 
+    // Maneja el registro de un nuevo usuario
     async Task RegisterClicked()
     {
         Loading.Show();
+        // Validaciones de los campos de entrada
         if (Register.Name == "" || Register.Email == "" || Register.Password == "" || Register.ConfirmPassword == "" ||
             Register.Name is null || Register.Email is null || Register.Password is null || Register.ConfirmPassword is null)
         {
@@ -448,6 +442,7 @@
         return;
     }
 
+    // Actualiza la contraseña de un usuario
     async Task UpdatePassword()
     {
         Loading.Show();
@@ -475,9 +470,9 @@
             return;
         }
 
-        Console.WriteLine($"Modificar usuario {userUpdate.id} con el correo {userUpdate.correo}");
-        Console.WriteLine($"Nueva contraseña {Register.Password}");
-        Console.WriteLine($"-------------------------------------------------------------------");
+        // Console.WriteLine($"Modificar usuario {userUpdate.id} con el correo {userUpdate.correo}");
+        // Console.WriteLine($"Nueva contraseña {Register.Password}");
+        // Console.WriteLine($"-------------------------------------------------------------------");
         // enviare como user.correo la contraseña nueva
         userUpdate.correo = Register.Password;
         string result = await userService.UpdatePasswordUserAsync(userUpdate);
@@ -501,13 +496,14 @@
     }
 
 
-
+    // Valida si el correo tiene un formato correcto
     public bool EsCorreoValido(string email)
     {
         string pattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
         return Regex.IsMatch(email, pattern);
     }
 
+    // Valida si la contraseña cumple con los requisitos mínimos
     public bool EsPasswordValido(string password)
     {
         // La expresión regular verifica:
@@ -518,6 +514,7 @@
         return Regex.IsMatch(password, pattern);
     }
 
+    // Verifica si un correo ya está registrado en la lista de usuarios
     public bool EsCorreoDuplicado(string email)
     {
         bool validarDuplicado = users.Any(item => item.correo!.Equals(email, StringComparison.OrdinalIgnoreCase));

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,5 +29,6 @@ namespace AppInvWebSharedLibrary.DTOs
         public double porcentaje_variacion_importe { get; set; }
         public string? usuario { get; set; }
         public DateTime fecha { get; set; }
+        public int periodoConsecutivo { get; set;}
     }
 }

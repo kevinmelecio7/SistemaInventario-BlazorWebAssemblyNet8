@@ -12,6 +12,8 @@ namespace AppInvWebSharedLibrary.DTOs.Excel
         public string? periodo { get; set; }
         public int activo { get; set; }
         public DateTime? fecha { get; set; }
+        public int consecutivo { get; set; }
+        public string? identificador { get; set; }
 
     }
 }

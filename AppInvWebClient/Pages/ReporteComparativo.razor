@@ -77,16 +77,33 @@
     [Inject]
     private InputsDataService InputsDataService { get; set; }
 
+    // Este método se ejecuta automáticamente al inicializar el componente.
+    // Realiza la carga de periodos desde la base de datos, procesa los datos de los últimos 6 periodos(o menos si no hay suficientes), 
+    // calcula sumatorias de cantidades e importes, y construye dos arreglos(PZinicial y PZcontado) 
+    // que servirán para visualizar o analizar comparativamente la información precargada y contada.
     protected override async Task OnInitializedAsync()
     {
         Loading.Show();
+        // 1. Obtener la lista de periodos disponibles desde el servicio de datos
         listPeriodo = await InputsDataService.GetPeriodoAsync();
+        // 2. Formatear cada periodo, agregando el identificador si existe
+        foreach (var item in listPeriodo)
+        {
+            if (item.identificador != "")
+            {
+                item.periodo = $"{item.periodo}, {item.consecutivo}-{item.identificador}";
+            }
 
+        }
+        
+        // 3. Inicializar listas temporales para almacenar datos agregados
         List<string> periodosData = new List<string>();
         List<double> CinicialData = new List<double>();
         List<double> CcontadaData = new List<double>();
         List<double> IinicialData = new List<double>();
         List<double> IcontadaData = new List<double>();
+
+        // 4. Definir cuántos periodos se van a analizar (máximo 6)
         int repeticiones = 0;
         if(listPeriodo.Count() >= 6)
         {
@@ -95,6 +112,8 @@
         {
             repeticiones = listPeriodo.Count();
         }
+
+        // 5. Recorrer los periodos seleccionados para acumular datos
         for(int i=0; i<repeticiones; i++)
         {
             double sumaInicial = 0;
@@ -102,7 +121,9 @@
             double sumaImpIncial = 0;
             double sumaImpContado = 0;
             periodo = listPeriodo[i].periodo!;
+            // Obtener los reportes asociados al periodo
             listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+            // Verificar si hay datos que procesar
             if(listReporte.Count() != 0)
             {
                 foreach (var report in listReporte)
@@ -112,7 +133,7 @@
                     sumaImpIncial = sumaImpIncial + report.importe_inicial;
                     sumaImpContado = sumaImpContado + report.importe_contada;
                 }
-
+                // Guardar los valores acumulados para ese periodo
                 periodosData.Add(periodo);
                 CinicialData.Add(sumaInicial);
                 CcontadaData.Add(sumaContado);
@@ -121,9 +142,11 @@
             } 
         }
 
+        // 6. Crear arreglos de objetos DataItem para representar los datos acumulados
         PZinicial = new DataItem[CinicialData.Count];
         PZcontado = new DataItem[CinicialData.Count];
 
+        // 7. Poblar los arreglos con los datos ya agrupados por periodo
         for (int j = 0; j < CinicialData.Count; j++)
         {
             PZinicial[j] = new DataItem
@@ -139,7 +162,7 @@
                     importe = IcontadaData[j]
                 };
         }
-        Loading.Hide();
+        Loading.Hide(); // Oculta el indicador de carga
     }
 
 

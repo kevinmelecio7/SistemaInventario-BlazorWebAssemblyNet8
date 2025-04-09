@@ -6,17 +6,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        LoginResponse response = await accountService.LogoutAsync();
+        LoginResponse response = await accountService.LogoutAsync(); // Llama al servicio de logout para cerrar la sesión
         if (!response.Flag)
         {
-            await js.InvokeVoidAsync("alert", response.Message);
+            await js.InvokeVoidAsync("alert", response.Message); // Si el logout falla, muestra una alerta con el mensaje de error y detiene el proceso
             return;
         }
         
-        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;  // Obtiene el proveedor de autenticación personalizado y actualiza el estado a "No autenticado"
         customAuthStateProvider.UpdateNotAuthenticationState();
-        await sessionStorage.SetItemAsync("logout", "Logout succesfull");
-        NavManager.NavigateTo("/", true);
+        await sessionStorage.SetItemAsync("logout", "Logout succesfull"); // Guarda en el almacenamiento de sesión un mensaje indicando que el logout fue exitoso
+        NavManager.NavigateTo("/", true); // Redirige al usuario a la página de inicio ("/") y recarga la aplicación
     }
 
 }

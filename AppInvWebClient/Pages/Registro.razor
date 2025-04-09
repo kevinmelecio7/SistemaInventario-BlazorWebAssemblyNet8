@@ -21,12 +21,6 @@
                     <RadzenRow AlignItems="AlignItems.Center">
                             <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Numero de Parte </RadzenText>
                             <RadzenTextBox @bind-Value="materialNPTXT" @onkeydown=@(e => enter(e, 1)) @ref="materialTextBox" Disabled="enableMaterial" aria-label="Default TextBox" Placeholder="Ingresa Numero de Parte" class="form-control large-font-input" />
-                        @* <RadzenColumn Size="2">
-                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Numero de Parte </RadzenText>
-                        </RadzenColumn>
-                        <RadzenColumn Size="10">
-                            <RadzenTextBox @bind-Value="materialNPTXT" @onkeydown=@(e => enter(e, 1)) @ref="materialTextBox" Disabled="enableMaterial" aria-label="Default TextBox" Placeholder="Ingresa Numero de Parte" class="form-control large-font-input" />
-                        </RadzenColumn> *@
                     </RadzenRow>
                     <RadzenRow AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.DisplayH6" TextAlign="TextAlign.Left" class="rz-pt-1"><b> @descripcion </b>  </RadzenText>
@@ -34,12 +28,6 @@
                     <RadzenRow AlignItems="AlignItems.Center">
                             <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Storage Bin </RadzenText>
                             <RadzenTextBox @bind-Value="storageTXT" @onkeydown=@(e => enter(e, 2)) Style="width: 100%" Disabled="enableStorage" aria-label="Default TextBox" Placeholder="Ingresa Storage Bin" class="form-control large-font-input" />
-                        @* <RadzenColumn Size="2">
-                            <RadzenText TextStyle="TextStyle.DisplayH6" class="rz-pt-1"> Storage Bin </RadzenText>
-                        </RadzenColumn>
-                        <RadzenColumn Size="10">
-                            <RadzenTextBox @bind-Value="storageTXT" @onkeydown=@(e => enter(e, 2)) Style="width: 100%" Disabled="enableStorage" aria-label="Default TextBox" Placeholder="Ingresa Storage Bin" class="form-control large-font-input" />
-                        </RadzenColumn> *@
                     </RadzenRow>
                 </RadzenStack>
             </RadzenFieldset>
@@ -230,8 +218,6 @@
     bool capturaAdicional = false;
     bool vacio = false;
 
-    // bool materialValid = false;
-    // bool storageValid = false;
 
 
     [Inject]
@@ -239,8 +225,7 @@
 
     private List<PeriodoDTO> listPeriodo = new List<PeriodoDTO>();
     PeriodoDTO peridoActual = new PeriodoDTO();
-    // List<InitialLoadDTO> listInitial = new List<InitialLoadDTO>();
-    // List<InitialLoadDTO> listInitialResultado = new List<InitialLoadDTO>();
+
 
     List<StorageBinDTO> listStorage = new List<StorageBinDTO>();
     StorageBinDTO storage = new StorageBinDTO();
@@ -258,15 +243,18 @@
         public string? StorageBin { get; set; }
     }
 
-    // List<InitialMaterial> listInitialMaterial = new List<InitialMaterial>();
-    // List<InitialStorage> listInitialStorage= new List<InitialStorage>();
 
     string usuario = string.Empty;
 
     private DateTime lastKeyPressTime;
     private bool isScannerInput;
 
-
+    /// <summary>
+    /// Método que se ejecuta cuando el componente Blazor se inicializa.
+    /// Carga los datos iniciales necesarios para operar, incluyendo periodos, almacenamiento,
+    /// materiales, y datos del usuario autenticado.
+    /// También verifica si se necesita generar folios para una carga inicial.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         Loading.Show();
@@ -274,22 +262,9 @@
         if (listPeriodo.Count() > 0 && listPeriodo[0].activo == 1)
         {
             vacio = false;
-            peridoActual = listPeriodo[0];
-            // listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
-            // listInitial = listInitial.Where(item => item.estado != "CONTADO").ToList();
-            // listInitialMaterial = listInitial.GroupBy(x => new { x.material_number, x.material_description })
-            //                                         .Select(y => new InitialMaterial
-            //                                         {
-            //                                             MaterialNumber = y.Key.material_number,
-            //                                             MaterialDescription = y.Key.material_description
-            //                                         }).ToList();
-            // listInitialStorage = listInitial.GroupBy(x => new { x.storage_bin })
-            //                                         .Select(y => new InitialStorage
-            //                                         {
-            //                                             StorageBin = y.Key.storage_bin
-            //                                         }).ToList();
-            listStorage = await InputsDataService.GetStorageAsync(listPeriodo[0].id);
-            listMaterial = await InputsDataService.GetMasterDataAsync(listPeriodo[0].id);
+            peridoActual = listPeriodo[0]; // Establecer periodo actual
+            listStorage = await InputsDataService.GetStorageAsync(listPeriodo[0].id); // Obtener Storages
+            listMaterial = await InputsDataService.GetMasterDataAsync(listPeriodo[0].id); // Obtener materiales
 
             //obtener usuario
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -298,17 +273,13 @@
             {
                 usuario = user.Identity.Name!;
             }
-            // if (listInitial.Count() == 0 || listStorage.Count() == 0 || listMaterial.Count() == 0)
-            // {
-            //     Loading.Hide();
-            //     vacio = true;
-            //     return;
-            // }
+
+            // Verificar si ya existe un folio para los registros iniciales
             var listInitialFirst = await InputsDataService.GetInitialLoadFirstAsync(listPeriodo[0].id);
             if (listInitialFirst[0].estado == "" || listInitialFirst[0].estado is null)
             {
-                // Console.WriteLine("Debo generar un folio a todos los registros");
-                string result1 = await InputsDataService.UpdateInitialLoadFolioAsync();
+                //Si el estado estado no contiene un valor, significa que tampoco existen folios
+                string result1 = await InputsDataService.UpdateInitialLoadFolioAsync(); //Actualizar la tabla "saldos_iniciales" y generar sus respectivos folios
                 if (result1 == "Error")
                 {
                     Modal.Show("ERROR AL GENERAR FOLIOS", "ERROR", Message.ERROR, Icon.ERROR);
@@ -324,6 +295,8 @@
         Loading.Hide();
     }
 
+    // Método que se ejecuta después de que se renderiza el componente por primera vez.
+    // Establece el enfoque en el campo de texto del material.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -332,13 +305,17 @@
         }
     }
 
-
+    // Redirige al usuario a la página de inicio (home).
     private void btnHome()
     {
         NavManager.NavigateTo("home");
     }
 
 
+    // <summary>
+    // Evento que se ejecuta cuando el usuario presiona una tecla (Enter o Tab) en un campo de texto.
+    // Realiza validaciones y transforma valores según ciertas reglas.
+    // </summary>
     private async Task enter(KeyboardEventArgs e, int textbox)
     {
         if (e.Key == "Tab" || e.Key == "Enter")
@@ -346,17 +323,20 @@
             Loading.Show();
             await Task.Delay(1500);
             Loading.Hide();
+            // Remover 'P' inicial si existe en el número de parte
             if (materialNPTXT != "" && materialNPTXT[0] == 'P')
                 materialNPTXT = materialNPTXT.Substring(1);
 
+            // Remover ceros iniciales si existe en el código de almacenamiento
             if (storageTXT != "" && storageTXT[0] == '0' && storageTXT[1] == '0')
                 storageTXT = storageTXT.Substring(3);
 
-            await validarCamposTexto(textbox);
+            await validarCamposTexto(textbox); // Validar campos relacionados
             Loading.Hide();
         }
     }
 
+    // Valida los campos de texto según el textbox (1 = material, 2 = storage)
     private async Task validarCamposTexto(int textbox)
     {
         Loading.Show();
@@ -366,12 +346,7 @@
             switch (textbox)
             {
                 case 1:
-                    // bool validarExisteMaterial = listInitialMaterial.Any(item => item.MaterialNumber!.Equals(materialNPTXT, StringComparison.OrdinalIgnoreCase));
-                    // if (validarExisteMaterial)
-                    // {
-                    //     var material = listInitialMaterial.Where(x => x.MaterialNumber == materialNPTXT).FirstOrDefault();
-                    //     descripcion = material!.MaterialDescription!;
-                    // }
+                    // Busca descripción del material en carga inicial
                     var listInitialMaterial = await InputsDataService.GetInitialMaterialLoadAsync(listPeriodo[0].id, materialNPTXT);
                     if (listInitialMaterial.Count() > 0)
                     {
@@ -379,19 +354,21 @@
                         descripcion = material!.material_description!;
                     }
 
+                    // Valida si ambos campos tienen datos
                     if (storageTXT != "" && materialNPTXT != "")
-                        await validarInitial();
+                        await validarInitial(); // si ambos ya tienen valor, van a buscar relacion en la tabla saldos_iniciales
                     break;
 
                 case 2:
                     if (storageTXT != "" && materialNPTXT != "")
-                        await validarInitial();
+                        await validarInitial(); // si ambos ya tienen valor, van a buscar relacion en la tabla saldos_iniciales
                     break;
             }
         } else {
             switch (textbox)
             {
                 case 1:
+                    // Busca material en listMaterial
                     material = listMaterial.Where(item => item.materialID == materialNPTXT).FirstOrDefault()!;
                     if (material is not null)
                     {
@@ -404,14 +381,16 @@
                         Loading.Hide();
                         return;
                     }
+                    // Valida si ambos campos tienen datos
                     if (storageTXT != "" && materialNPTXT != "")
                     {
-                        await validarInitial();
+                        await validarInitial();// si ambos ya tienen valor, van a buscar relacion en la tabla saldos_iniciales
                     }
                     break;
 
 
                 case 2:
+                    // Busca storage en listStorage
                     storage = listStorage.Where(item => item.storagebin == storageTXT).FirstOrDefault()!;
                     if(storage is null)
                     {
@@ -421,9 +400,10 @@
                         Loading.Hide();
                         return;
                     }
+                    // Valida si ambos campos tienen datos
                     if (storageTXT != "" && materialNPTXT != "")
                     {
-                        await validarInitial();
+                        await validarInitial();// si ambos ya tienen valor, van a buscar relacion en la tabla saldos_iniciales
                     }
                     break;
             }
@@ -431,6 +411,7 @@
         Loading.Hide();
     }
 
+    // Activa modo de captura adicional y valida existencia de material y storage
     private async Task modeCapturaAdicional()
     {
         capturaAdicional = true;
@@ -522,29 +503,17 @@
             enableMaterial = true;
             enableStorage = true;
         }
-
-
-
-
-        // bool validarExisteMaterial = listInitialMaterial.Any(item => item.MaterialNumber!.Equals(materialNPTXT, StringComparison.OrdinalIgnoreCase));
-        // bool validarExisteStorage = listInitialStorage.Any(item => item.StorageBin!.Equals(storageTXT, StringComparison.OrdinalIgnoreCase));
-        // if (!validarExisteMaterial || !validarExisteStorage)
-        // {
-        //     Modal.Show("EXISTEN CAMPOS ", "PRECAUCION", Message.WARNING, Icon.WARNING);
-        //     return;
-        // }
-
-
-
-
     }
 
+    //Actualiza la vista, recargando los datos por el metodo OnInitializedAsync()
     private void refresh()
     {
         NavManager.NavigateTo("home");
         NavManager.NavigateTo("registro");
     }
 
+
+    //valida si la cantidad registrada por el usuario es un entero
     private async Task BuscaFolio()
     {
         bool esNumerico = Int32.TryParse(cantidad, out int cantidadINT);
@@ -563,6 +532,7 @@
         //debe aplicarse cuando solo sea una captura manual
     }
 
+    //METODO DE GUARDADO
     private async Task Guardado()
     {
         Loading.Show();
@@ -606,10 +576,8 @@
                     importe_contada = ((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity),
                     diferencia_importe = ((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity) - filtrolistInitialResultado[0].total_cost,
                     porcentaje_variacion_importe = ((((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity) - filtrolistInitialResultado[0].total_cost) * 100) / filtrolistInitialResultado[0].total_quantity,
-                    // importe_contada = listInitialResultado[0].unit_standard_cost * cantidad,
-                    // diferencia_importe = listInitialResultado[0].total_cost - (listInitialResultado[0].unit_standard_cost * cantidad),
-                    // porcentaje_variacion_importe = (100 - (((listInitialResultado[0].unit_standard_cost * cantidad) * 100) / listInitialResultado[0].total_cost)),
                     usuario = usuario,
+                    periodoConsecutivo = peridoActual.consecutivo
                 };
 
             //  2.Insertar en la nueva tabla el registro del folio, cantidad, comparativa y
@@ -624,14 +592,6 @@
 
             Loading.Hide();
             seguroGuardar = false;
-            // Modal.Show("REGISTRO GUARDADO EXITOSAMENTE", "GUARDADO", Message.SUCCESS, Icon.SUCCESS, $"FOLIO {folio}");
-            // NotificationService.Notify(new NotificationMessage
-            //     {
-            //         Severity = NotificationSeverity.Success,
-            //         Summary = "Registro Guardado",
-            //         Detail = $"Folio {folio}",
-            //         Duration = 4000
-            //     });
             folio = string.Empty;
             refresh();
         } else
@@ -643,7 +603,7 @@
             if(listRegistros.Count() != 0)
             {
                 //  Hacer una consulta con la tabla nueva, con los registros que inician con A y obtener el ultimo digito para agregarle 1
-                var registrosConA = listRegistros.Where(item => item.folio != null && item.folio.Contains("A"))
+                var registrosConA = listRegistros.Where(x => x.folio != null && x.folio.Contains("A")).Where(y => y.folio.Contains("P" + peridoActual.consecutivo + ""))
                     .OrderByDescending(item => item.id).FirstOrDefault();
                 if (registrosConA is not null)
                 {
@@ -651,11 +611,11 @@
                     folio = conFolio[0] + "-" + (int.Parse(conFolio[1]) + 1);
                 } else
                 {
-                    folio = "A" + conPeriodo[0] + conPeriodo[1] + "-" + 1;
+                    folio = "A" + conPeriodo[0] + conPeriodo[1] + "P" + peridoActual.consecutivo + "-" + 1;
                 }
             } else
             {
-                folio = "A" + conPeriodo[0] + conPeriodo[1] + "-" + 1;
+                folio = "A" + conPeriodo[0] + conPeriodo[1] + "P" + peridoActual.consecutivo + "-" + 1;
             }
             bool esNumerico = Int32.TryParse(cantidad, out int cantidadINT);
             ReporteDTO reporte = new ReporteDTO
@@ -677,6 +637,7 @@
                     diferencia_importe = 0,
                     porcentaje_variacion_importe = 0,
                     usuario = usuario,
+                    periodoConsecutivo = peridoActual.consecutivo
                 };
 
             // Insertar en la nueva tabla el registro del folio
@@ -690,14 +651,7 @@
 
             Loading.Hide();
             seguroGuardar = false;
-            // Modal.Show("REGISTRO GUARDADO EXITOSAMENTE", "GUARDADO", Message.SUCCESS, Icon.SUCCESS, $"FOLIO {folio}");
-            // NotificationService.Notify(new NotificationMessage
-            //     {
-            //         Severity = NotificationSeverity.Success,
-            //         Summary = "Registro Guardado",
-            //         Detail = $"Folio {folio}",
-            //         Duration = 4000
-            // });
+
             refresh();
         }
 

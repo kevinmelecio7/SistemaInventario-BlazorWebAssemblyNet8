@@ -32,16 +32,22 @@
                         <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-2 rz-my-0">Registra un Periodo</RadzenText>
 
                         <RadzenRow class="rz-text-align-center" >
-                            <RadzenColumn Size="4" class="rz-p-5">
+                            <RadzenColumn Size="4" class="rz-p-4">
                                 <RadzenLabel Text="Mes" Component="DropDownBindValueMonth" />
                                 <RadzenDropDown @bind-Value=@month Data=@dataMonth Style="width: 100%; max-width: 400px;" Name="DropDownBindValueMonth" />
                             </RadzenColumn>
-                            <RadzenColumn Size="1" class="rz-p-5">
+                            <RadzenColumn Size="1" class="rz-p-4">
                                 -
                             </RadzenColumn>
-                            <RadzenColumn Size="6" class="rz-p-5">
+                            <RadzenColumn Size="6" class="rz-p-4">
                                 <RadzenLabel Text="Año" Component="DropDownBindValueYear" />
                                 <RadzenDropDown @bind-Value=@year Data=@dataYear Style="width: 100%; max-width: 400px;" Name="DropDownBindValueYear" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                        <RadzenRow class="rz-text-align-center">
+                            <RadzenColumn Size="12" class="rz-p-4">
+                                <RadzenLabel Text="Identificador (max. 25 caracteres)" Component="TextIdentificador" />
+                                <RadzenTextBox @bind-Value=@identificador Style="width: 100%" aria-label="Default TextBox" />
                             </RadzenColumn>
                         </RadzenRow>
                         <RadzenButton Click=@(()=>insertarPeriodo()) Text="GUARDAR NUEVO PERIODO" ButtonStyle="ButtonStyle.Primary" />
@@ -56,24 +62,30 @@
                         @if (listPeriodo[0].activo == 1)
                         {
                             <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-2 rz-my-0">Periodo Actual <b>(ABIERTO)</b> </RadzenText>
-                            <RadzenText TextStyle="TextStyle.Body1"><b>@listPeriodo[0].periodo</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1"><b>@listPeriodo[0].periodo | ID: @listPeriodo[0].consecutivo "@listPeriodo[0].identificador"</b></RadzenText>
                             <RadzenButton Click=@(()=>actualizarPeriodo()) Text="Cerrar Periodo" ButtonStyle="ButtonStyle.Primary" />
                         } else
                         {
                             <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-2 rz-my-0">Periodo Anterior <b>(CERRADO)</b> </RadzenText>
-                            <RadzenText TextStyle="TextStyle.Body1"><b>@listPeriodo[0].periodo</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1"><b>@listPeriodo[0].periodo | ID: @listPeriodo[0].consecutivo "@listPeriodo[0].identificador"</b></RadzenText>
                             <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-4 rz-mb-0">Nuevo Periodo</RadzenText>
                             <RadzenRow class="rz-text-align-center">
-                                <RadzenColumn Size="4" class="rz-p-5">
+                                <RadzenColumn Size="4" class="rz-p-4">
                                     <RadzenLabel Text="Mes" Component="DropDownBindValueMonth" />
                                     <RadzenDropDown @bind-Value=@month Data=@dataMonth Style="width: 100%; max-width: 400px;" Name="DropDownBindValueMonth" />
                                 </RadzenColumn>
-                                <RadzenColumn Size="1" class="rz-p-5">
+                                <RadzenColumn Size="1" class="rz-p-4">
                                     -
                                 </RadzenColumn>
-                                <RadzenColumn Size="6" class="rz-p-5">
+                                <RadzenColumn Size="6" class="rz-p-4">
                                     <RadzenLabel Text="Año" Component="DropDownBindValueYear" />
                                     <RadzenDropDown @bind-Value=@year Data=@dataYear Style="width: 100%; max-width: 400px;" Name="DropDownBindValueYear" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                            <RadzenRow class="rz-text-align-center">
+                                <RadzenColumn Size="12" class="rz-p-4">
+                                    <RadzenLabel Text="Identificador (max. 25 caracteres)" Component="TextIdentificador" />
+                                    <RadzenTextBox @bind-Value=@identificador Style="width: 100%" aria-label="Default TextBox" />
                                 </RadzenColumn>
                             </RadzenRow>
                             <RadzenButton Click=@(()=>insertarPeriodo()) Text="Abrir Periodo" ButtonStyle="ButtonStyle.Success" />
@@ -81,6 +93,24 @@
                     </RadzenStack>
                 </RadzenStack>
             </RadzenCard>
+            @if(listPeriodo[0].activo == 0)
+            {
+                <RadzenCard Variant="Variant.Filled" class="rz-my-2 rz-mx-auto rz-background-color-primary-lighter" Style="max-width: 420px">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem" class="rz-p-4">
+
+                                <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.And"
+                                                AllowSorting="true" PageSize="5" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
+                                                Data="@listPeriodo" Density="Density.Compact" class="responsive-table" ColumnWidth="100rem"
+                                                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@selectedPeriodo>
+                                    <Columns>
+                                        <RadzenDataGridColumn Property="periodo" Title="Periodo" />
+                                        <RadzenDataGridColumn Property="consecutivo" Title="ID" />
+                                        <RadzenDataGridColumn Property="identificador" Title="Identificador" />
+                                    </Columns>
+                                </RadzenDataGrid>
+                    </RadzenStack>
+                </RadzenCard>
+            }
 
             @if (listPeriodo[0].activo == 1)
             {
@@ -220,18 +250,6 @@
                                             </RadzenDataGridColumn>
                                         </Columns>
                                     </RadzenDataGrid>
-                                    @* <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.And"
-                                                    AllowSorting="true" PageSize="5" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
-                                                    Data="@listMaterial" ColumnWidth="300rem" Density="Density.Compact">
-                                        <HeaderTemplate>
-                                            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Agregar Material" Disabled="@(btnEliminarlistMaterial? false : true)" />
-                                        </HeaderTemplate>
-                                        <Columns>
-                                            <RadzenDataGridColumn Property="materialID" Title="materialID" />
-                                            <RadzenDataGridColumn Property="descripcion" Title="descripcion" />
-                                            <RadzenDataGridColumn Property="unit_price" Title="unit_price" />
-                                        </Columns>
-                                    </RadzenDataGrid> *@
                                 } 
                             </RadzenAccordionItem>
                             <RadzenAccordionItem Text="Initial Load" Icon="book" CollapseTitle="Collapse customers." class="rz-background-color-base-200"
@@ -351,6 +369,8 @@
     DataGridEditMode editModeStorage = DataGridEditMode.Single;
     DataGridEditMode editModeMaterial = DataGridEditMode.Single;
 
+    IList<PeriodoDTO> selectedPeriodo;
+
 
     bool newStorage = false;
     bool newMaterial = false;
@@ -383,6 +403,7 @@
 
     string month = String.Empty;
     string year = String.Empty;
+    string identificador = String.Empty;
     List<string> dataMonth = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
     List<string> dataYear = new List<string>();
     int yearNow = DateTime.Now.Year - 2;
@@ -393,7 +414,7 @@
 
     bool sinFolios = false;
 
-
+    /// Carga datos iniciales, obtiene el usuario autenticado y actualiza las listas de datos.
     protected override async Task OnInitializedAsync()
     {
         Loading.Show();
@@ -404,7 +425,9 @@
             dataYear.Add((yearNow + i).ToString());
         }
 
-        await refreshInfo();
+        await refreshInfo();// Refresca la información de la base de datos
+
+        // Verifica si las listas contienen datos y habilita los botones de eliminación
         if (listStorage.Count() != 0)
         {
             btnEliminarListStorage = true;
@@ -426,9 +449,14 @@
             usuario = user.Identity.Name!;
         }
 
+        // Obtiene los períodos disponibles
+        listPeriodo = await InputsDataService.GetPeriodoAsync();
+        selectedPeriodo = new List<PeriodoDTO> { listPeriodo.FirstOrDefault() };
+
         Loading.Hide();
     }
 
+    // Refresca la información de la base de datos y actualiza las listas.
     protected private async Task refreshInfo()
     {
         listPeriodo = await InputsDataService.GetPeriodoAsync();
@@ -438,7 +466,6 @@
             listMaterial = await InputsDataService.GetMasterDataAsync(listPeriodo[0].id);
             listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);  
         }
-        // if (listInitial[0].folio is null || listInitial[0].folio == "")
         if (listInitial.Count() != 0)
         {
             if (listInitial[0].folio is null || listInitial[0].folio == "")
@@ -454,34 +481,53 @@
         }
     }
 
+    // Inserta un nuevo período en la base de datos tras validar los datos ingresados.
     private async Task insertarPeriodo()
     {
-        Loading.Show();
-        if(month == "" || year == "")
+        Loading.Show(); 
+        // Validaciones de campos
+        if(month == "" || year == "" || identificador == "")
         {
             Loading.Hide();
             Modal.Show("EXISTEN CAMPOS VACIOS", "ERROR", Message.ERROR, Icon.ERROR);
             return;
         }
-        string newPeriodo = month + "-" + year;
-        var periodoSimilar = listPeriodo.Where(item => item.periodo == newPeriodo);
+        if(identificador.Length > 25)
+        {
+            Loading.Hide();
+            Modal.Show("EL CAMPO 'IDENTIFICADOR' SOBREPASO EL LIMITE DE CARACTERES", "ERROR", Message.ERROR, Icon.ERROR);
+            return;
+        }
+        string validarString = identificador.Trim(' ');
+        if( validarString.Length == 0)
+        {
+            Loading.Hide();
+            Modal.Show("INGRESA UN VALOR EN EL CAMPO DE 'IDENTIFICADOR'", "ERROR", Message.ERROR, Icon.ERROR);
+            return;
+        }
+        string newPeriodo = month + "-" + year; // Verifica si ya existe un período con los mismos datos
+        var periodoSimilar = listPeriodo.Where(item => item.periodo == newPeriodo).Where(item2 => item2.identificador == identificador).ToList();
+ 
+
         if(periodoSimilar.Count() != 0)
         {
             Loading.Hide();
-            Modal.Show("YA EXISTE UN PERIODO CON EL MISMO MES Y AÑO", "ERROR", Message.ERROR, Icon.ERROR);
+            Modal.Show("YA EXISTE UN PERIODO CON EL MISMO MES - AÑO E IDENTIFICADOR", "ERROR", Message.ERROR, Icon.ERROR);
             return;
         }
-
-        PeriodoDTO periodo = new PeriodoDTO { periodo = newPeriodo, activo = 1, fecha = DateTime.Now };
+        // Inserta el nuevo período
+        PeriodoDTO periodo = new PeriodoDTO { periodo = newPeriodo, activo = 1, fecha = DateTime.Now, identificador = identificador };
         await InputsDataService.InsertPeriodoAsync(periodo);
         await refreshInfo();
         month = String.Empty;
         year = String.Empty;
+        identificador = String.Empty;
         await SaveBitacora("insertarPeriodo", "GUARDAR", "Periodo nuevo guardado");
         Loading.Hide();
         Modal.Show("PERIODO DE INVENTARIO ACTIVO GUARDADO", "GUARDADO", Message.SUCCESS, Icon.SUCCESS);
     }
 
+    // Actualiza el estado del período en la base de datos.
     private async Task actualizarPeriodo()
     {
         Loading.Show();
@@ -492,6 +538,10 @@
         Loading.Hide();
     }
 
+    // Guarda una lista específica en la base de datos dependiendo del tipo de datos.
+    // 1 - Lista de Storage
+    // 2 - Lista de Materiales
+    // 3 - Lista de carga inicial
     private async Task guardarList(int input)
     {
         string result = string.Empty;
@@ -526,26 +576,6 @@
                 Modal.Show("MATERIALS GUARDADO", "GUARDADO", Message.SUCCESS, Icon.SUCCESS, "MATERIALS GUARDADO PARA PERIODO: " + listPeriodo[0].periodo);
                 break;
             case 3:
-                // int contador = 0;
-                // List<InitialLoadDTO> listTempInitial = new List<InitialLoadDTO>();
-                // foreach(var obj in listInitial)
-                // {
-                //     listTempInitial.Add(obj);
-                //     contador++;
-                //     if(contador == 10)
-                //     {
-                //         result = await InputsDataService.InsertInitialLoadAsync(listInitial);
-                //         if (result == "Error")
-                //         {
-                //             await refreshInfo();
-                //             Modal.Show("ERROR AL GUARDAR INITIAL LOAD", "ERROR", Message.ERROR, Icon.ERROR);
-                //             Loading.Hide();
-                //             return;
-                //         }
-                //         contador = 0;
-                //         listTempInitial = new List<InitialLoadDTO>();
-                //     }
-                // }
                 result = await InputsDataService.InsertInitialLoadAsync(listInitial);
                 if (result == "Error")
                 {
@@ -564,6 +594,10 @@
 
     }
 
+    // Elimina una lista de datos de la base de datos según el tipo de entrada.
+    // 1 - Lista de Storage
+    // 2 - Lista de Materiales
+    // 3 - Lista de carga inicial
     private async Task eliminarList(int input)
     {
         string result = string.Empty;
@@ -628,6 +662,7 @@
 
     }
 
+    //Guardado de Nuevo o Editar un Storage
     async Task SaveRowStorage(StorageBinDTO storage)
     {
         Loading.Show();
@@ -663,6 +698,7 @@
         Loading.Hide();
     }
 
+    //Guardado de Nuevo o Editar un Material
     async Task SaveRowMaterial(MasterDataDTO material)
     {
         Loading.Show();
@@ -706,6 +742,7 @@
         Loading.Hide();
     }
 
+    // Guarda un registro en la bitácora
     async Task SaveBitacora(string accion, string tipo, string descripcion)
     {
         BitacoraDTO bitacora = new BitacoraDTO { 
@@ -717,8 +754,7 @@
         await bitacoraService.InsertBitacoraAsync(bitacora);
     }
 
-
-
+    // Carga de archivo Excel para Storage Bin
     async Task ExcelMasterData_StorageBin(InputFileChangeEventArgs e)
     {
         try{
@@ -810,6 +846,7 @@
         }
     }
 
+    // Carga de archivo Excel para Materiales
     async Task ExcelMasterData_Material(InputFileChangeEventArgs e)
     {
         try
@@ -907,6 +944,7 @@
     
     }
 
+    // Carga de archivo Excel para Carga Inicial
     async Task ExcelMasterData_InitialLoad(InputFileChangeEventArgs e)
     {
         try
@@ -978,20 +1016,6 @@
                             }
                         }
 
-                        // if (rl[3].Length == 0)
-                        // {
-                        //     listInitial = new List<InitialLoadDTO>();
-                        //     Modal.Show("EXISTE UN DATO INVALIDO EN EL ARCHIVO", "ERROR", Message.ERROR, Icon.ERROR, $"EXISTES CAMPOS VACIOS EN LA COLUMNA '{dtStorage.Columns[4]}'");
-                        //     Loading.Hide();
-                        //     return;
-                        // }
-                        // if (rl[4].Length == 0)
-                        // {
-                        //     listInitial = new List<InitialLoadDTO>();
-                        //     Modal.Show("EXISTE UN DATO INVALIDO EN EL ARCHIVO", "ERROR", Message.ERROR, Icon.ERROR, $"EXISTES CAMPOS VACIOS EN LA COLUMNA '{dtStorage.Columns[4]}'");
-                        //     Loading.Hide();
-                        //     return;
-                        // }
                         if (rl[4].Length > 10)
                         {
                             listInitial = new List<InitialLoadDTO>();
@@ -1050,11 +1074,8 @@
                         listInitial.Add(initial);
                         rl.Clear();
                     }
-                    }
-                        
-
-                    
-                // }
+                }
+                       
                 
             }
             if (listInitial.Count() > 0)
@@ -1073,24 +1094,29 @@
         }
     }
 
+    // Elimina un objeto StorageBinDTO de la lista de elementos a insertar.
     void OnCreateRowStorage(StorageBinDTO storage)
     {
         storagesToInsert.Remove(storage);
     }
+    // Elimina un objeto MasterDataDTO de la lista de elementos a insertar.
     void OnCreateRowMaterial(MasterDataDTO material)
     {
         materialsToInsert.Remove(material);
     }
+    // Reinicia el estado de un StorageBinDTO eliminándolo de las listas de inserción y actualización.
     void Reset(StorageBinDTO storage)
     {
         storagesToInsert.Remove(storage);
         storagesToUpdate.Remove(storage);
     }
+    // Reinicia el estado de un MasterDataDTO eliminándolo de las listas de inserción y actualización.
     void Reset(MasterDataDTO material)
     {
         materialsToInsert.Remove(material);
         materialsToUpdate.Remove(material);
     }
+    // Reinicia todas las listas de almacenamiento y materiales.
     void Reset()
     {
         storagesToInsert.Clear();
@@ -1098,26 +1124,31 @@
         materialsToInsert.Clear();
         materialsToUpdate.Clear();
     }
+    // Reinicia el estado de un objeto MasterDataDTO antes de actualizarlo.
     void OnUpdateRowStorage(StorageBinDTO user)
     {
         Reset(user);
     }
+    // Reinicia el estado de un objeto MasterDataDTO antes de actualizarlo.
     void OnUpdateRowMaterial(MasterDataDTO user)
     {
         Reset(user);
     }
+    // Habilita la edición de un StorageBinDTO.
     async Task EditRowStorage(StorageBinDTO storage)
     {
         Reset();
         storagesToUpdate.Add(storage);
         await storagesGrid.EditRow(storage);
     }
+    // Habilita la edición de un MasterDataDTO.
     async Task EditRowMaterial(MasterDataDTO material)
     {
         Reset();
         materialsToUpdate.Add(material);
         await materialsGrid.EditRow(material);
     }
+    // Cancela la edición de un StorageBinDTO y actualiza la interfaz.
     async Task CancelEditStorage(StorageBinDTO storage)
     {
         Loading.Show();
@@ -1127,6 +1158,7 @@
         newStorage = false;
         Loading.Hide();
     }
+    // Cancela la edición de un MasterDataDTO y actualiza la interfaz.
     async Task CancelEditMaterial(MasterDataDTO material)
     {
         Loading.Show();
@@ -1136,6 +1168,7 @@
         newMaterial = false;
         Loading.Hide();
     }
+    // Inserta un nuevo objeto StorageBinDTO en la lista y lo habilita para edición.
     async Task InsertRowStorage()
     {
         if (editModeStorage == DataGridEditMode.Single)
@@ -1147,6 +1180,7 @@
         await storagesGrid.InsertRow(storage);
         newStorage = true;
     }
+    // Inserta un nuevo objeto MasterDataDTO en la lista y lo habilita para edición.
     async Task InsertRowMaterial()
     {
         if (editModeMaterial == DataGridEditMode.Single)
@@ -1158,6 +1192,7 @@
         await materialsGrid.InsertRow(material);
         newMaterial = true;
     }
+    // Elimina un objeto StorageBinDTO de la base de datos y actualiza la interfaz.
     async Task DeleteRowStorage(StorageBinDTO storage)
     {
         Loading.Show();
@@ -1169,6 +1204,7 @@
         btnEliminarListStorage = true;
         Loading.Hide();
     }
+    // Elimina un objeto MasterDataDTO de la base de datos y actualiza la interfaz.
     async Task DeleteRowMaterial(MasterDataDTO material)
     {
         Loading.Show();

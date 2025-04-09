@@ -36,6 +36,8 @@ namespace AppInvWebServer.Repositories
                                     periodo = reader["periodo"].ToString(),
                                     activo = Convert.ToInt32(reader["activo"]),
                                     fecha = DateTime.Parse(reader["fecha"].ToString()),
+                                    consecutivo = reader.IsDBNull(reader.GetOrdinal("consecutivo")) ? 0 : Convert.ToInt32(reader["consecutivo"]),
+                                    identificador = reader.IsDBNull(reader.GetOrdinal("identificador")) ? "" : reader["identificador"].ToString()
                                 });
                             }
                         }
@@ -52,16 +54,21 @@ namespace AppInvWebServer.Repositories
         {
             try
             {
+                List<PeriodoDTO> listPeriodo = await GetPeriodoAsync();
+                var filtroListPeriodo = listPeriodo.Where(x => x.periodo == model.periodo).OrderByDescending(z => z.consecutivo).ToList();
+
                 using (var connection = new SqlConnection(_connectionSQL))
                 {
                     await connection.OpenAsync();
-                    string sql = "INSERT INTO periodo (periodo, activo, fecha) VALUES (@Periodo, @Activo, @Fecha)";
+                    string sql = "INSERT INTO periodo (periodo, activo, fecha, consecutivo, identificador) VALUES (@Periodo, @Activo, @Fecha, @Consecutivo, @Identificador)";
 
                     using (var command = new SqlCommand(sql, connection))
                     {
                         command.Parameters.AddWithValue("@Periodo", model.periodo);
                         command.Parameters.AddWithValue("@Activo", model.activo);
                         command.Parameters.AddWithValue("@Fecha", model.fecha);
+                        command.Parameters.AddWithValue("@Consecutivo", filtroListPeriodo.Count() + 1 );
+                        command.Parameters.AddWithValue("@Identificador", model.identificador);
 
                         await command.ExecuteNonQueryAsync();
                     }
@@ -720,7 +727,7 @@ namespace AppInvWebServer.Repositories
                             foreach (var obj in listInitial)
                             {
                                 i++;
-                                folio = "R" + stringPeriodo + "-" + i;
+                                folio = "R" + stringPeriodo + "P" + periodoActual.consecutivo + "-" + i;
                                 //Console.WriteLine(folio + "\n");
                                 using (var command = new SqlCommand(sql, connection, transaction))
                                 {
@@ -802,8 +809,8 @@ namespace AppInvWebServer.Repositories
                     {
                         try
                         {
-                            string sql = "INSERT INTO reporte (folio, periodo, estado, storage_bin, storage_type, material_number, material_descripcion, unit_standard_cost, cantidad_inicial, cantidad_contada, diferencia_cantidad, porcentaje_diferencia, importe_inicial, importe_contada, diferencia_importe, porcentaje_variacion_importe, usuario, fecha ) " +
-                                            "VALUES (@folio, @periodo, @estado, @storage_bin, @storage_type, @material_number, @material_descripcion, @unit_standar_cost, @cantidad_inicial, @cantidad_contada, @diferencia_cantidad, @porcentaje_diferencia, @importe_inicial, @importe_contada, @diferencia_importe, @porcentaje_variacion_importe, @usuario, GETDATE());";
+                            string sql = "INSERT INTO reporte (folio, periodo, estado, storage_bin, storage_type, material_number, material_descripcion, unit_standard_cost, cantidad_inicial, cantidad_contada, diferencia_cantidad, porcentaje_diferencia, importe_inicial, importe_contada, diferencia_importe, porcentaje_variacion_importe, usuario, fecha, periodoConsecutivo ) " +
+                                            "VALUES (@folio, @periodo, @estado, @storage_bin, @storage_type, @material_number, @material_descripcion, @unit_standar_cost, @cantidad_inicial, @cantidad_contada, @diferencia_cantidad, @porcentaje_diferencia, @importe_inicial, @importe_contada, @diferencia_importe, @porcentaje_variacion_importe, @usuario, GETDATE(), @periodoConsecutivo);";
 
                             using (var command = new SqlCommand(sql, connection, transaction))
                             {
@@ -824,6 +831,7 @@ namespace AppInvWebServer.Repositories
                                 command.Parameters.AddWithValue("@diferencia_importe", obj.diferencia_importe);
                                 command.Parameters.AddWithValue("@porcentaje_variacion_importe", obj.porcentaje_variacion_importe);
                                 command.Parameters.AddWithValue("@usuario", obj.usuario);
+                                command.Parameters.AddWithValue("@periodoConsecutivo", obj.periodoConsecutivo);
 
                                 await command.ExecuteNonQueryAsync();
                             }
@@ -855,6 +863,19 @@ namespace AppInvWebServer.Repositories
             int pageSize = 500; // Tamaño de cada página
             int offset = 0;      // Inicio de los registros a consultar
 
+            //--- Obtener PERIODO y CONSECUTIVO    $"{item.periodo}, {item.consecutivo}-{item.identificador}"
+            string[] arrayP = periodo.Split(',');
+            string periodoDB = arrayP[0];
+            int consecutivo = 0;
+            if (arrayP.Count() == 1)
+                consecutivo = 0;
+            else
+            {
+                string consecS = arrayP[1].Trim(' ');
+                string[] array2P = consecS.Split("-");
+                consecutivo = Convert.ToInt32(array2P[0]);
+            }
+
             try
             {
                 using (var connection = new SqlConnection(_connectionSQL))
@@ -862,33 +883,56 @@ namespace AppInvWebServer.Repositories
                     await connection.OpenAsync();
 
                     // Consulta con paginación
-                    string sql = @"
-        SELECT 
-            *,
-            ISNULL(cantidad_segundo, -1) AS cantidad_segundo -- Reemplaza NULL por -1
-        FROM reporte
-        WHERE periodo = @Periodo
-        ORDER BY id
-        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
-
-                    while (true)
+                    string sql = @" SELECT *, ISNULL(cantidad_segundo, -1) AS cantidad_segundo FROM reporte WHERE periodo = @Periodo ";
+                    if (consecutivo != 0)
                     {
-                        // Ejecuta la consulta para una página
-                        var partialData = (await connection.QueryAsync<ReporteDTO>(
-                            sql,
-                            new { Periodo = periodo, Offset = offset, PageSize = pageSize }
-                        )).ToList();
-
-                        // Si no hay más datos, rompe el bucle
-                        if (!partialData.Any())
-                            break;
-
-                        // Agrega los datos a la lista principal
-                        dtos.AddRange(partialData);
-
-                        // Incrementa el offset para la siguiente página
-                        offset += pageSize;
+                        sql += " and periodoConsecutivo = @periodoConsecutivo ";
                     }
+                    sql += "ORDER BY id OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
+
+
+                    if(consecutivo == 0)
+                    {
+                        while (true)
+                        {
+                            // Ejecuta la consulta para una página
+                            var partialData = (await connection.QueryAsync<ReporteDTO>(
+                                sql,
+                                new { Periodo = periodoDB, Offset = offset, PageSize = pageSize }
+                            )).ToList();
+
+                            // Si no hay más datos, rompe el bucle
+                            if (!partialData.Any())
+                                break;
+
+                            // Agrega los datos a la lista principal
+                            dtos.AddRange(partialData);
+
+                            // Incrementa el offset para la siguiente página
+                            offset += pageSize;
+                        }
+                    } else
+                    {
+                        while (true)
+                        {
+                            // Ejecuta la consulta para una página
+                            var partialData = (await connection.QueryAsync<ReporteDTO>(
+                                sql,
+                                new { Periodo = periodoDB, periodoConsecutivo = consecutivo, Offset = offset, PageSize = pageSize }
+                            )).ToList();
+
+                            // Si no hay más datos, rompe el bucle
+                            if (!partialData.Any())
+                                break;
+
+                            // Agrega los datos a la lista principal
+                            dtos.AddRange(partialData);
+
+                            // Incrementa el offset para la siguiente página
+                            offset += pageSize;
+                        }
+                    }
+                    
 
 
                 }
@@ -1041,6 +1085,19 @@ namespace AppInvWebServer.Repositories
             int pageSize = 500; // Tamaño de cada página
             int offset = 0;      // Inicio de los registros a consultar
 
+            //--- Obtener PERIODO y CONSECUTIVO    $"{item.periodo}, {item.consecutivo}-{item.identificador}"
+            string[] arrayP = periodo.Split(',');
+            string periodoDB = arrayP[0];
+            int consecutivo = 0;
+            if (arrayP.Count() == 1)
+                consecutivo = 0;
+            else
+            {
+                string consecS = arrayP[1].Trim(' ');
+                string[] array2P = consecS.Split("-");
+                consecutivo = Convert.ToInt32(array2P[0]);
+            }
+
             try
             {
                 using (var connection = new SqlConnection(_connectionSQL))
@@ -1070,29 +1127,59 @@ namespace AppInvWebServer.Repositories
                        '0001-01-01 00:00:00.000' as fecha 
                 FROM saldos_iniciales s 
                 INNER JOIN periodo p ON p.id_periodo = s.fkPeriodo 
-                WHERE periodo = @Periodo AND (estado = 'PENDIENTE' OR estado = 'AUDITADO') 
-                ORDER BY id
-                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
+                WHERE periodo = @Periodo AND (estado = 'PENDIENTE' OR estado = 'AUDITADO') ";
+                    
+                    if(consecutivo != 0)
+                    {
+                        sql += " and p.consecutivo = @consecutivo ";
+                    }
+
+
+                sql += " ORDER BY id OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
                     // Ejecutamos la consulta por partes
-                    while (true)
+                    if(consecutivo == 0)
                     {
-                        // Ejecuta la consulta para una página
-                        var partialData = (await connection.QueryAsync<ReporteDTO>(
-                            sql,
-                            new { Periodo = periodo, Offset = offset, PageSize = pageSize }
-                        )).ToList();
+                        while (true)
+                        {
+                            // Ejecuta la consulta para una página
+                            var partialData = (await connection.QueryAsync<ReporteDTO>(
+                                sql,
+                                new { Periodo = periodoDB, Offset = offset, PageSize = pageSize }
+                            )).ToList();
 
-                        // Si no hay más datos, rompe el bucle
-                        if (!partialData.Any())
-                            break;
+                            // Si no hay más datos, rompe el bucle
+                            if (!partialData.Any())
+                                break;
 
-                        // Agrega los datos a la lista principal
-                        dtos.AddRange(partialData);
+                            // Agrega los datos a la lista principal
+                            dtos.AddRange(partialData);
 
-                        // Incrementa el offset para la siguiente página
-                        offset += pageSize;
+                            // Incrementa el offset para la siguiente página
+                            offset += pageSize;
+                        }
+                    } else
+                    {
+                        while (true)
+                        {
+                            // Ejecuta la consulta para una página
+                            var partialData = (await connection.QueryAsync<ReporteDTO>(
+                                sql,
+                                new { Periodo = periodoDB, consecutivo = consecutivo, Offset = offset, PageSize = pageSize }
+                            )).ToList();
+
+                            // Si no hay más datos, rompe el bucle
+                            if (!partialData.Any())
+                                break;
+
+                            // Agrega los datos a la lista principal
+                            dtos.AddRange(partialData);
+
+                            // Incrementa el offset para la siguiente página
+                            offset += pageSize;
+                        }
                     }
+                    
                 }
             }
             catch (Exception ex)

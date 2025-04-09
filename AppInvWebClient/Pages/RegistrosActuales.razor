@@ -101,9 +101,12 @@
                                                   Click="@(args => DeleteRow(registro))" @onclick:stopPropagation="true">
                                     </RadzenButton>
                                 }
-                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
-                                              Click="@(args => EditRow(registro))" @onclick:stopPropagation="true">
-                                </RadzenButton>
+                                @if (registro.estado != "AUDITADO")
+                                {
+                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1"
+                                                  Click="@(args => EditRow(registro))" @onclick:stopPropagation="true">
+                                    </RadzenButton>
+                                }
                             }
                         </Template>
                     </RadzenDataGridColumn>
@@ -410,15 +413,25 @@
     [Inject]
     private IJSRuntime JS { get; set; }
 
+    // Inicializa datos al cargar el componente: obtiene periodo, reporte, materiales y usuario
     protected override async Task OnInitializedAsync()
     {
         Loading.Show();
         listPeriodo = await InputsDataService.GetPeriodoAsync();
         if (listPeriodo.Count() == 0)
         {
-            Modal.Show("NO HAY UN PERIDIO POR EL MOMENTO", "ERROR", Message.WARNING, Icon.WARNING);
+            Modal.Show("NO HAY UN PERIODO POR EL MOMENTO", "ERROR", Message.WARNING, Icon.WARNING);
             Loading.Hide();
             return;
+        }
+        // Agrega identificador al nombre del periodo si existe
+        foreach (var item in listPeriodo)
+        {
+            if (item.identificador != "")
+            {
+                item.periodo = $"{item.periodo}, {item.consecutivo}-{item.identificador}";
+            }
+
         }
         periodo = listPeriodo[0].periodo!;
         listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
@@ -429,6 +442,7 @@
             return;
         }
 
+        // Actualiza estado según cantidad del segundo conteo
         foreach (var item in listReporte)
         {
             if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
@@ -444,11 +458,14 @@
         listPrecargado = listReporte.Where(x => x.estado == "PRECARGADO").ToList();
         listAdicional = listReporte.Where(x => x.estado == "ADICIONAL").ToList();
         listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+
+        //Agregar los PENDIENTES de la tabla saldos_iniciales
         foreach (var p in listPendientes)
         {
             listReporte.Add(p);
         }
 
+        // Obtener usuario actual
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user.Identity != null && user.Identity.IsAuthenticated)
@@ -458,6 +475,7 @@
         Loading.Hide();
     }
 
+    // Abre el formulario de edición para el registro seleccionado
     async Task EditRow(ReporteDTO reg)
     {
         selectedRegistro = reg;
@@ -468,6 +486,7 @@
         showEdit = true;
     }
 
+    // Cambia el estado del folio seleccionado a "AUDITADO" y recarga los datos
     async Task validarAuditado()
     {
         Loading.Show();
@@ -475,14 +494,14 @@
         InitialLoadDTO updateInitial = new InitialLoadDTO();
         updateInitial.folio = selectedRegistro.folio;
         updateInitial.estado = "AUDITADO";
-        string result1 = await InputsDataService.UpdateInitialLoadEstadoAsync(updateInitial);
+        string result1 = await InputsDataService.UpdateInitialLoadEstadoAsync(updateInitial);// Actualizar estado en base de datos
         if (result1 == "Error")
         {
             Modal.Show("ERROR AL CAMBIAR ESTADO A 'AUDITADO' EL FOLIO " + selectedRegistro.folio, "ERROR", Message.ERROR, Icon.ERROR);
             Loading.Hide();
             return;
         }
-
+        // Limpiar y recargar vista
         selectedRegistro = new ReporteDTO();
         await OnInitializedAsync();
         showEdit = false;
@@ -491,6 +510,7 @@
         Loading.Hide();
     }
 
+    // Cancela el registro seleccionado y actualiza sus campos a cero
     async Task cancelarRegistro()
     {
         Loading.Show();
@@ -512,14 +532,14 @@
             porcentaje_variacion_importe = 0,
             usuario = usuario
         };
-        string result1 = await InputsDataService.UpdateReporteTodosCamposAsync(reporte);
+        string result1 = await InputsDataService.UpdateReporteTodosCamposAsync(reporte);// Guardar cambios
         if (result1 == "Error")
         {
             Modal.Show("ERROR AL CANCELAR FOLIO " + selectedRegistro.folio, "CANCELADO", Message.ERROR, Icon.ERROR);
             Loading.Hide();
             return;
         }
-
+        // Limpiar y recargar vista
         selectedRegistro = new ReporteDTO();
         await OnInitializedAsync();
         showEdit = false;
@@ -528,11 +548,10 @@
         Loading.Hide();
     }
 
+    // Actualiza la cantidad del segundo conteo para un registro seleccionado
     async Task actualizarSegundoConteo()
     {
         Loading.Show();
-        // listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
-        // listInitialResultado = listInitial.Where(x => x.storage_bin == selectedRegistro.storage_bin).Where(y => y.material_number == selectedRegistro.material_number).ToList();
         ReporteDTO reporte = new ReporteDTO();
         if (selectedRegistro.folio![0] == 'A') //registro adicional
         {
@@ -583,12 +602,14 @@
         Loading.Hide();
     }
 
+    // Muestra el modal de confirmación para eliminar el registro seleccionado
     async Task DeleteRow(ReporteDTO reg)
     {
         selectedRegistro = reg;
         showDelete = true;
     }
 
+    // Elimina el registro seleccionado de la base de datos
     async Task eliminarRegistro()
     {
         Loading.Show();
@@ -610,23 +631,27 @@
         Modal.Show("EL REGISTRO HA SIDO ELIMINADO", "ELIMINADO", Message.SUCCESS, Icon.SUCCESS);
     }
 
+    // Limpia completamente las listas de inserciones y actualizaciones
     void Reset()
     {
         registrosToInsert.Clear();
         registrosToUpdate.Clear();
     }
 
+    // Elimina un registro específico de las listas de inserciones y actualizaciones
     void Reset(ReporteDTO reg)
     {
         registrosToInsert.Remove(reg);
         registrosToUpdate.Remove(reg);
     }
 
+    // Se ejecuta al actualizar un registro y lo elimina de las listas si existe
     void OnUpdateRow(ReporteDTO reg)
     {
         Reset(reg);
     }
 
+    // Se ejecuta al crear un nuevo registro y lo elimina de la lista de inserciones si existe
     void OnCreateRow(ReporteDTO reg)
     {
         registrosToInsert.Remove(reg);

@@ -1,13 +1,14 @@
 ﻿@page "/home"
 <AuthorizeView>
     <NotAuthorized>
-        <NotAuthorizedPage />
+        <NotAuthorizedPage /> <!-- Redirige a una página de acceso denegado si el usuario no está autenticado -->
     </NotAuthorized>
     <Authorized>
+        <!-- Muestra el contenido de la pagina si estas autorizado o iniciaste sesion-->
         <PageTitle>Home</PageTitle>
 
         <h1>Sistema de Inventario Fisico</h1>
-        <h3>Bienvenido @context.User.Identity!.Name</h3>
+        <h3>Bienvenido @context.User.Identity!.Name</h3><!-- Muestra el nombre del usuario autenticado -->
 
     </Authorized>
 </AuthorizeView>
