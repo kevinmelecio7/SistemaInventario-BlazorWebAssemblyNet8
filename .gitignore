@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Sistema de inventario físico.pptx
+/ManualUsuario - SistemaInventarioFisico.docx
+/AppInvWebServer/appsettings.json
