@@ -30,5 +30,6 @@ namespace AppInvWebSharedLibrary.DTOs
         public string? usuario { get; set; }
         public DateTime fecha { get; set; }
         public int periodoConsecutivo { get; set;}
+        public string? periodoConsecutivoDesc { get; set; }
     }
 }

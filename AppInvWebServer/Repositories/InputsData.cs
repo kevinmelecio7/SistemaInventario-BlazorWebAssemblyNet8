@@ -1108,6 +1108,8 @@ namespace AppInvWebServer.Repositories
                 SELECT 0 as id, 
                        folio, 
                        p.periodo, 
+                       p.consecutivo as periodoConsecutivo,
+                       p.identificador as periodoConsecutivoDesc,
                        estado, 
                        storage_bin, 
                        storage_type, 

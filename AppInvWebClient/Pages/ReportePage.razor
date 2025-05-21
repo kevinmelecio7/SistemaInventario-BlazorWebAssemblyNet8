@@ -5,6 +5,7 @@
 @using System.IO;
 @using System.Globalization;
 @using System.Text
+@inject NavigationManager Navigation;
 
 <AuthorizeView Roles="Admin">
     <NotAuthorized>
@@ -14,12 +15,21 @@
         <h3>Reporte</h3>
         <br />
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0.5rem">
-            <RadzenLabel Text="Seleccione un periodo" Component="DropDownVirtualization" />
-            <RadzenDropDown AllowClear="true" @bind-Value=periodo AllowVirtualization="true" Name="DropDownVirtualization" Change=@(()=>{vacio=false;})
-                            AllowFiltering="true" Data=@listPeriodo TextProperty="periodo" ValueProperty="periodo" Style="width: 100%; max-width: 400px;" />
-            <RadzenButton Click=@(()=>buscarReporte()) Icon="search" ButtonStyle="ButtonStyle.Primary" />
-            @if (tableReporte)
+            
+            @* <RadzenDropDown AllowClear="true" @bind-Value=periodo AllowVirtualization="true" Name="DropDownVirtualization" Change=@(()=>{vacio=false;})
+            AllowFiltering="true" Data=@listPeriodo TextProperty="periodo" ValueProperty="periodo" Style="width: 100%; max-width: 400px;" /> *@
+            
+            @if (!tableReporte)
             {
+                <RadzenLabel Text="Seleccione un periodo" Component="DropDownVirtualization" />
+                <RadzenDropDown @bind-Value=@selectPeriodo Data=@listPeriodo TextProperty="periodo" ValueProperty="periodo" Name="DropDownMultipleChips"
+                                Multiple=true AllowClear=true Placeholder="Select products" Chips=true Style="width: 100%; max-width: 400px;" />
+                <RadzenButton Click=@(()=>buscarReporte()) Icon="search" ButtonStyle="ButtonStyle.Primary" />
+
+            }else
+            {
+                <RadzenListBox @bind-Value=@selectPeriodo Data=@listPeriodo TextProperty="periodo" ValueProperty="periodo" Style="width: 100%; max-width: 400px; height:200px" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select company" }})" Disabled />
+                <RadzenButton Click=@(()=>refreshPage()) Icon="autorenew" ButtonStyle="ButtonStyle.Primary" />
                 <RadzenButton Text="EXPORTAR REPORTE" Icon="get_app" ButtonStyle="ButtonStyle.Secondary" Click=@(()=>exportarExcel()) />
                 <RadzenButton Text="EXPORTAR TOTALIZADO" Icon="get_app" ButtonStyle="ButtonStyle.Info" Click=@(()=>exportarTotalizadoExcel()) />
                 <RadzenButton Text="EXPORTAR SAP" Icon="get_app" ButtonStyle="ButtonStyle.Primary" Click=@(()=>exportarSAP()) />
@@ -71,7 +81,7 @@
 
                                         <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Diferencia Cantidad</RadzenText>
                                         <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].diferencia_cantidad pz</b></RadzenText>
-                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Porcentaje Cantidad</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">Porcentaje Confiabilidad</RadzenText>
                                         <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@selectedRegistro[0].porcentaje_diferencia.ToString("#,##0.00", CultureInfo.CreateSpecificCulture("en-US")) %</b></RadzenText>
                                     </RadzenColumn>
                                     <RadzenColumn SizeSM="6">
@@ -126,6 +136,8 @@
                         
                     </HeaderTemplate>
                     <Columns>
+                        <RadzenDataGridColumn Property="periodo" Title="Periodo" />
+                        <RadzenDataGridColumn Property="periodoConsecutivoDesc" Title="Periodo Id." />
                         <RadzenDataGridColumn Property="folio" Title="Folio" />
                         <RadzenDataGridColumn Property="estado" Title="Estado">
                             <Template Context="data">
@@ -163,7 +175,7 @@
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn Property="storage_bin" Title="Storage Bin" />
                         <RadzenDataGridColumn Property="material_number" Title="Material" />
-                        <RadzenDataGridColumn Property="material_descripcion" Title="Descripcion" />
+                        @* <RadzenDataGridColumn Property="material_descripcion" Title="Descripcion" /> *@
                         <RadzenDataGridColumn Property="cantidad_inicial" Title="Cantidad Inicial" />
                         <RadzenDataGridColumn Property="cantidad_contada" Title="Cantidad Contado">
                             <Template Context="data">
@@ -228,6 +240,12 @@
                             </Template>
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn Property="diferencia_cantidad" Title="Diferencia" />
+                        <RadzenDataGridColumn Property="porcentaje_diferencia" Title="% Confiabilidad">
+                            <Template Context="data">
+                                <span>@Math.Round(@data.porcentaje_diferencia) %</span>
+                            </Template>
+                        </RadzenDataGridColumn>
+
                     </Columns>
                 </RadzenDataGrid>
             </div>
@@ -235,7 +253,7 @@
         @if (vacio)
         {
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-12">
-                <RadzenText TextStyle="TextStyle.H3" TagName="TagName.P">No exiten registros para el periodo @periodo</RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" TagName="TagName.P">No exiten registros para el periodo seleccionado</RadzenText>
             </RadzenStack>
         }
 
@@ -246,7 +264,7 @@
         @if (Loading.showLoading)
         {
             <div class="modal fade show bg-black bg-opacity-50" style="display: block">
-                <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-dialog modal-sm modal-dialog-centered">s
                     <div class="modal-content">
                         <div class="modal-body">
                             <div class="d-flex align-items-center start">
@@ -301,6 +319,7 @@
     IList<ReporteDTO> selectedRegistro;
 
     string periodo = string.Empty;
+    IList<string> selectPeriodo = new List<string>();
 
     bool tableReporte = false;
     bool vacio = false;
@@ -341,15 +360,22 @@
 
         }
 
+        selectPeriodo.Add(listPeriodo[0].periodo!);
         periodo = listPeriodo[0].periodo!;
 
         Loading.Hide();
     }
 
+    private void refreshPage()
+    {
+        Navigation.NavigateTo("/home");
+        Navigation.NavigateTo("/reporte");
+    }
+
     // Busca y procesa los reportes del periodo seleccionado, ajustando estados y mostrando tabla o mensaje vacío
     private async Task buscarReporte()
     {
-        if (periodo is null)
+        if (selectPeriodo is null || selectPeriodo!.Count() == 0)
         {
             vacio = false;
             tableReporte = false;
@@ -358,7 +384,29 @@
 
         //En caso de que periodo si existe, entonces traer informacion similar a la tabla que esta en la vista de RegistrosActuales.razor
         Loading.Show();
-        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        listReporte = new List<ReporteDTO>();
+        listPendientes = new List<ReporteDTO>();
+        foreach (var item in selectPeriodo)
+        {
+            List<ReporteDTO> listReportexPeriodo = new List<ReporteDTO>();
+            listReportexPeriodo = await InputsDataService.GetReportePorPeriodoAsync(item);
+            string[] periodoTextList = item.Split("-");
+            @foreach (var x in listReportexPeriodo)
+            {
+                x.periodoConsecutivoDesc = periodoTextList[2];
+            }
+            if (listReportexPeriodo != null && listReportexPeriodo.Any())
+            {
+                listReporte.AddRange(listReportexPeriodo);
+            }
+            List<ReporteDTO> listPendientesxPeriodo = new List<ReporteDTO>();
+            listPendientesxPeriodo = await InputsDataService.GetInitialLoadPendientesAsync(item);
+            if (listPendientesxPeriodo != null && listPendientesxPeriodo.Any())
+            {
+                listPendientes.AddRange(listPendientesxPeriodo);
+            }
+        }
+
         foreach (var item in listReporte)
         {
             if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
@@ -371,7 +419,6 @@
         }
 
 
-        listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
         foreach (var p in listPendientes)
         {
             listReporte.Add(p);
@@ -398,7 +445,18 @@
         Loading.Show();
         try
         {
-            listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+            // listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+            listReporte = new List<ReporteDTO>();
+            foreach (var item in selectPeriodo)
+            {
+                List<ReporteDTO> listReportexPeriodo = new List<ReporteDTO>();
+                listReportexPeriodo = await InputsDataService.GetReportePorPeriodoAsync(item);
+                if (listReportexPeriodo != null && listReportexPeriodo.Any())
+                {
+                    listReporte.AddRange(listReportexPeriodo);
+                }
+            }
+
             foreach (var item in listReporte)
             {
                 if (item.cantidad_segundo > -1 && item.estado != "CANCELADO")
@@ -409,7 +467,17 @@
                         item.estado = "ADICIONAL 2DO";
                 }
             }
-            listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+            // listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+            listPendientes = new List<ReporteDTO>();
+            foreach (var item in selectPeriodo)
+            {
+                List<ReporteDTO> listPendientesxPeriodo = new List<ReporteDTO>();
+                listPendientesxPeriodo = await InputsDataService.GetInitialLoadPendientesAsync(item);
+                if (listPendientesxPeriodo != null && listPendientesxPeriodo.Any())
+                {
+                    listPendientes.AddRange(listPendientesxPeriodo);
+                }
+            }
             foreach (var p in listPendientes)
             {
                 listReporte.Add(p);
@@ -431,7 +499,7 @@
             headerRow.CreateCell(9).SetCellValue("Cantidad Inicial");
             headerRow.CreateCell(10).SetCellValue("Cantidad Contada");
             headerRow.CreateCell(11).SetCellValue("Diferencia Cantidad");
-            headerRow.CreateCell(12).SetCellValue("Porcentaje Diferencia");
+            headerRow.CreateCell(12).SetCellValue("% Confiabilidad");
             headerRow.CreateCell(13).SetCellValue("Importe Inicial");
             headerRow.CreateCell(14).SetCellValue("Importe Contada");
             headerRow.CreateCell(15).SetCellValue("Diferencia Importe");
@@ -517,12 +585,32 @@
     private async Task exportarTotalizadoExcel()
     {
         Loading.Show();
-        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        // listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        listReporte = new List<ReporteDTO>();
+        foreach (var item in selectPeriodo)
+        {
+            List<ReporteDTO> listReportexPeriodo = new List<ReporteDTO>();
+            listReportexPeriodo = await InputsDataService.GetReportePorPeriodoAsync(item);
+            if (listReportexPeriodo != null && listReportexPeriodo.Any())
+            {
+                listReporte.AddRange(listReportexPeriodo);
+            }
+        }
         listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList(); ;
         List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
 
         //**************************************/
-        listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+        // listPendientes = await InputsDataService.GetInitialLoadPendientesAsync(periodo);
+        listPendientes = new List<ReporteDTO>();
+        foreach (var item in selectPeriodo)
+        {
+            List<ReporteDTO> listPendientesxPeriodo = new List<ReporteDTO>();
+            listPendientesxPeriodo = await InputsDataService.GetInitialLoadPendientesAsync(item);
+            if (listPendientesxPeriodo != null && listPendientesxPeriodo.Any())
+            {
+                listPendientes.AddRange(listPendientesxPeriodo);
+            }
+        }
         foreach (var p in listPendientes)
         {
             listReporte.Add(p);
@@ -575,7 +663,8 @@
                     cantidad_inicial = cantidadInicial,
                     cantidad_contada = cantidadContada,
                     diferencia_cantidad = cantidadContada - cantidadInicial,
-                    porcentaje_diferencia = (((cantidadContada - cantidadInicial) * 100) / cantidadInicial),
+                    // porcentaje_diferencia = (((cantidadContada - cantidadInicial) * 100) / cantidadInicial),
+                    porcentaje_diferencia = Math.Abs((1 - (Math.Abs(cantidadContada - cantidadInicial) / cantidadInicial)) * 100),
                     importe_inicial = importeInicial,
 
                     importe_contada = ((cantidadContada * importeInicial) / cantidadInicial),
@@ -623,7 +712,7 @@
         headerRow.CreateCell(6).SetCellValue("Cantidad Inicial");
         headerRow.CreateCell(7).SetCellValue("Cantidad Contada");
         headerRow.CreateCell(8).SetCellValue("Diferencia Cantidad");
-        headerRow.CreateCell(9).SetCellValue("Porcentaje Diferencia");
+        headerRow.CreateCell(9).SetCellValue("% Confiabilidad");
         headerRow.CreateCell(10).SetCellValue("Importe Inicial");
         headerRow.CreateCell(11).SetCellValue("Importe Contada");
         headerRow.CreateCell(12).SetCellValue("Diferencia Importe");
@@ -666,7 +755,7 @@
             }
             sheet.SetColumnWidth(col, (maxLength + 2) * 256); // Ajuste el valor 256 para el tamaño
         }
-        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        // listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
         await buscarReporte();
 
         // Guardar el archivo en memoria y devolverlo como un archivo descargable
@@ -690,7 +779,17 @@
     private async Task exportarSAP()
     {
         Loading.Show();
-        listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        // listReporte = await InputsDataService.GetReportePorPeriodoAsync(periodo);
+        listReporte = new List<ReporteDTO>();
+        foreach (var item in selectPeriodo)
+        {
+            List<ReporteDTO> listReportexPeriodo = new List<ReporteDTO>();
+            listReportexPeriodo = await InputsDataService.GetReportePorPeriodoAsync(item);
+            if (listReportexPeriodo != null && listReportexPeriodo.Any())
+            {
+                listReporte.AddRange(listReportexPeriodo);
+            }
+        }
         listReporte = listReporte.Where(x => x.estado != "CANCELADO").ToList();
         List<ReporteDTO> listReporteTotalizado = new List<ReporteDTO>();
 

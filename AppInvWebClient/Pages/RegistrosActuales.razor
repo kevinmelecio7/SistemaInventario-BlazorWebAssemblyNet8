@@ -561,7 +561,7 @@
                 {
                     id = selectedRegistro.id,
                     cantidad_segundo = segundoConteo,
-                    diferencia_cantidad = 0,
+                    diferencia_cantidad = segundoConteo,
                     porcentaje_diferencia = 0,
                     importe_inicial = 0,
 
@@ -574,12 +574,16 @@
         {
             listInitial = await InputsDataService.GetInitialLoadAsync(listPeriodo[0].id);
             listInitialResultado = listInitial.Where(x => x.storage_bin == selectedRegistro.storage_bin).Where(y => y.material_number == selectedRegistro.material_number).ToList();
+            double Ndiferencia = Math.Abs(segundoConteo - listInitialResultado[0].total_quantity);
+            double Ntotal = listInitialResultado[0].total_quantity;
+            double DD = (1 - (Ndiferencia / Ntotal)) * 100;
             reporte = new ReporteDTO
                 {
                     id = selectedRegistro.id,
                     cantidad_segundo = segundoConteo,
                     diferencia_cantidad = segundoConteo - listInitialResultado[0].total_quantity,
-                    porcentaje_diferencia = (((segundoConteo - listInitialResultado[0].total_quantity) * 100) / listInitialResultado[0].total_quantity),
+                    // porcentaje_diferencia = (((segundoConteo - listInitialResultado[0].total_quantity) * 100) / listInitialResultado[0].total_quantity),
+                    porcentaje_diferencia = (1 - (Math.Abs(segundoConteo - listInitialResultado[0].total_quantity) / listInitialResultado[0].total_quantity)) * 100, //formula para PORCENTAJE DE CONFIABILIDAD
                     importe_inicial = listInitialResultado[0].total_cost,
 
                     importe_contada = ((segundoConteo * listInitialResultado[0].total_cost) / listInitialResultado[0].total_quantity),

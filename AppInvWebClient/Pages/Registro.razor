@@ -570,7 +570,8 @@
                     cantidad_inicial = filtrolistInitialResultado[0].total_quantity,
                     cantidad_contada = cantidadINT,
                     diferencia_cantidad = cantidadINT - filtrolistInitialResultado[0].total_quantity,
-                    porcentaje_diferencia = (((cantidadINT - filtrolistInitialResultado[0].total_quantity) * 100) / filtrolistInitialResultado[0].total_quantity),
+                    // porcentaje_diferencia = (((cantidadINT - filtrolistInitialResultado[0].total_quantity) * 100) / filtrolistInitialResultado[0].total_quantity),
+                    porcentaje_diferencia = (1 - (Math.Abs(cantidadINT - filtrolistInitialResultado[0].total_quantity) / filtrolistInitialResultado[0].total_quantity)) * 100, //formula para PORCENTAJE DE CONFIABILIDAD
                     importe_inicial = filtrolistInitialResultado[0].total_cost,
 
                     importe_contada = ((cantidadINT * filtrolistInitialResultado[0].total_cost) / filtrolistInitialResultado[0].total_quantity),
@@ -630,7 +631,7 @@
                     unit_standard_cost = material.unit_price,
                     cantidad_inicial = 0,
                     cantidad_contada = cantidadINT,
-                    diferencia_cantidad = 0,
+                    diferencia_cantidad = cantidadINT,
                     porcentaje_diferencia = 0,
                     importe_inicial = 0,
                     importe_contada = material.unit_price * cantidadINT,
