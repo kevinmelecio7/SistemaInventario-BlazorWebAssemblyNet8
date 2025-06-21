@@ -40,16 +40,25 @@
 ## 🖼️ Screenshots
 
 ### 🔐 Interactive login with validation
-
+<p align="left">
+  <img src="https://raw.githubusercontent.com/kevinmelecio7/SistemaInventario-BlazorWebAssemblyNet8/master/Login.png" alt="Home Page" width="200">
+</p>
 
 ### 🏠 Home page Administrator
+<p align="left">
+  <img src="https://raw.githubusercontent.com/kevinmelecio7/SistemaInventario-BlazorWebAssemblyNet8/master/Home%20Page%20Administrator.png" alt="Home Page" width="400">
+</p>
 
 
 ### 📱 Home page User
-
+<p align="left">
+  <img src="https://raw.githubusercontent.com/kevinmelecio7/SistemaInventario-BlazorWebAssemblyNet8/master/Home%20Page%20User.png" alt="Home Page" width="400">
+</p>
 
 ### 📊 Dashboard with dynamic statistics
-
+<p align="left">
+  <img src="https://raw.githubusercontent.com/kevinmelecio7/SistemaInventario-BlazorWebAssemblyNet8/master/Dashboard.png" alt="Home Page" width="400">
+</p>
 
 
 <h2 align="left">🚀 Technologies</h2>
