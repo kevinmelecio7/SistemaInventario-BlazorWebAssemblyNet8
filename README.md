@@ -65,13 +65,14 @@
 
 ###
 
-<div align="left">
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" height="40" alt="csharp logo"  />
+[![Programming](https://skillicons.dev/icons?i=cs,net,visualstudio)](https://skillicons.dev)
+<!--<div align="left">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg" alt="csharp logo"  />
+  <img width="2" />
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" alt="bootstrap logo"  />
   <img width="12" />
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" height="40" alt="bootstrap logo"  />
-  <img width="12" />
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/visualstudio/visualstudio-plain.svg" height="40" alt="visualstudio logo"  />
-</div>
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/visualstudio/visualstudio-plain.svg" alt="visualstudio logo"  />
+</div>-->
 <p align="left">Built with .NET 8 using the <ins><b>Blazor Server Model</b></ins> for direct access to databases, files, etc. The logic and data are server-siide, ideal for apps that require server-side logic. </p>
 <p align="left">The application uses  <ins><b>JWT (JSON Web Token)</b></ins> for authentication and authorization in the web application and secure transmission of information. </p>
 <p align="left">For the application design (front-end) use <ins><b>Radzen</b></ins>. It is a tool and set of UI (user interface) components for applications like Blazor. Radzen contains a free and open-source collection of components such as Forms, Layouts, Data, etc. It saves design time and visual logic, making it ideal for dashboard, businnes apps, administratives apps, etc.</p>
